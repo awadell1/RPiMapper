@@ -1,0 +1,41 @@
+#summary Descriptions of system architecture in both hardware and software.
+
+= Table of contents =
+<wiki:toc max_depth="2" />
+
+= Hardware =
+== Components ==
+ * [http://store.irobot.com/shop/index.jsp?categoryId=3311368 iRobot Create]
+ * [http://beagleboard.org/ BeagleBoard-xM]
+ * [http://www.amazon.com/Microsoft-LifeCam-VX-700/dp/B002JXKGFA Microsoft LifeCam VX-700 USB Webcam]
+ * Three [http://www.parallax.com/tabid/768/ProductID/92/Default.aspx PING))) Ultrasonic Distance Sensor]
+ * [http://www.newegg.com/Product/Product.aspx?Item=N82E16833315091 WiFi Adapter]
+ * [http://store.irobot.com/product/index.jsp?productId=2818673 iRobot USB Cable]
+ * [http://beagleoncreate.googlecode.com/svn/GpioPowerAddon/GpioPowerAddon.pdf GPIO Power Addon board] _[http://beagleoncreate.googlecode.com/svn/GpioPowerAddon/gerber/gerber.zip gerber]_
+
+== High-Level Block diagram ==
+http://beagleoncreate.googlecode.com/svn/doc/images/hardwaretoplevel.png
+ 
+== Power ==
+The [http://www.irobot.com/filelibrary/pdfs/hrd/create/Create%20Open%20Interface_v2.pdf iRobot Create's Cargo Bay Connector] provide battery ground and voltage in order to power additional sensors and peripherals. We utilized the Create's battery voltage (~16V) to power the [http://beagleboard.org/ BeagleBoard-xM] (5V). The [http://beagleoncreate.googlecode.com/svn/GpioPowerAddon/GpioPowerAddon.pdf GPIO Power Addon board] has voltage converter to convert 16V power down to both 5V and 12V. In this case, we grab pin 10 (Switched Vpwr) and pin 21 (GND) from the Create Cargo Bay Connector and feed it into [http://beagleoncreate.googlecode.com/svn/GpioPowerAddon/GpioPowerAddon.pdf GPIO Power Addon board] to produce 5V power for the [http://beagleboard.org/ BeagleBoard-xM].
+
+http://beagleoncreate.googlecode.com/svn/doc/images/powerblockdiagram.png
+
+== Sensors ==
+The USB webcam can be plugged into the [http://beagleboard.org/ BeagleBoard-xM]'s USB port and doesn't require extra power source. The three [http://www.parallax.com/tabid/768/ProductID/92/Default.aspx PING))) Ultrasonic Distance Sensors] however requires 5V signals in order to perform the measurement, the details can be found [http://www.parallax.com/Portals/0/Downloads/docs/prod/acc/28015-PING-v1.6.pdf here]. Therefore, we utilized the the GPIO pins from the expansion connectors on the [http://beagleboard.org/ BeagleBoard-xM] through a voltage level translator IC [http://www.ti.com/lit/ds/symlink/txb0108.pdf TXB0108] from TI, since the GPIO pin voltage level from the [http://beagleboard.org/ BeagleBoard-xM] is 1.8V and the sonar requires 5V signals. To see the detail connections regarding the voltage level shifter, see the schematic for [http://beagleoncreate.googlecode.com/svn/GpioPowerAddon/GpioPowerAddon.pdf GpioPowerAddon].
+= Software =
+== Components ==
+ * Create
+  All the iRobot Create related message passing. The purpose of this class is to listen for the TCP messages ([http://www.irobot.com/filelibrary/pdfs/hrd/create/Create%20Open%20Interface_v2.pdf Open Interface Protocol]) from [http://code.google.com/p/beagleoncreate/source/browse/#svn%2FMatlabToolboxiRobotCreate MatlabToolboxiRobotCreate] at the remote host and pass the message through serial to the iRobot Create. When a message is sent from the iRobot Create, it is sent through wireless TCP protocol back to the remote host.
+
+ * Camera
+  The Camera class utilizes the [http://gstreamer.freedesktop.org/ gstreamer] library to access images from the webcam attached. The image from the webcam is then process through ARtagLocalizer class to detect and estimate the pose of any ARtags in view. A beacon message is sent through wireless UDP protocol on every camera frame.
+
+ * Sonar
+  The Sonar class utilizes the [http://en.wikipedia.org/wiki/Sysfs sysfs] for gpio pins on the BeagleBoard. The Sonar class sets the corresponding gpio pin for the sonar as output, then toggles the gpio pin high and low in order to send pulses to initiate every measurement. Thereafter, the gpio pin is set as input to enable an edge changing trigger. A time of flight is measured and calculated into distance measurement.
+
+ * Control
+   This class is for any control to the BeagleBoard. It currently only allows the controls of the universal gripper and the video streaming on/off control.
+
+ * main
+  The main function that tie all classes together and spawn threads accordingly. At the beginning of main function, a listening-to-message thread (ListenMessage) is created and allow any incoming TCP connection to initiate and parse packets accordingly (ProcessPackets). Once an INIT message is received, a sensor thread is created (MakeConnection) and allow more threads (Camera/Sonar/Create) to be created. The process is then entered into normal operation until an END message is received.
