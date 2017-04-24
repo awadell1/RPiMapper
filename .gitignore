@@ -2,3 +2,6 @@
 *
 !*.*
 !*/
+
+# Don't Ignore makefiles
+!Makefile
