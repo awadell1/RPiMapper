@@ -6,4 +6,8 @@
 # Don't Ignore makefiles
 !Makefile
 
+*.exe
+
 *.gch
+
+*.sublime-*

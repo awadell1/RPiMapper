@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
   
   // Connection settings for socket
   serv_addr.sin_family = AF_INET;
-  serv_addr.sin_port = htons(5000);
+  serv_addr.sin_port = htons(8888);
   
   if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr) <=0)
   {

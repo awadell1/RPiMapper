@@ -15,6 +15,46 @@
 // Define Socket Port
 #define SOCK_PORT 8888
 
+void setWheelSpeed(float wheelLeft, float wheelRight){
+  // Function to update the wheel speeds
+  printf("\tSetting Wheel Speeds (%f, %f)\n", wheelLeft, wheelRight);
+}
+
+const char * readSonar(char *sonar){
+  // Read Sonar Values
+  sonar = "1,2,5,3";
+  return sonar;
+}
+
+const char * parsePacket(const void *packet){
+  // Copy packet into buffer
+  char buff[MAX_PACKET_SIZE];
+  const char dlm[] = ",";
+  memcpy(buff, packet, strlen(packet)+1);
+
+  // Get First Token
+  char *cmd = strtok(buff, dlm);
+
+  printf("Recieved Command: %s\n", cmd);
+
+  if(strcmp(cmd, "wheelSpeed") == 0){
+    // Extract Wheel Speeds
+    float wheelLeft = atof(strtok(NULL, dlm));
+    float wheelRight = atof(strtok(NULL, dlm));
+
+    // Set Wheel Speeds
+    setWheelSpeed(wheelLeft, wheelRight);
+
+    // Report Success
+    return "done";
+  }
+ //else if(strcmp(cmd, "readSonar") == 0){
+ //  // Return Sonar Readings
+ //  return readSonar();
+ //}
+
+}
+
 int main(int argc, char *argv[])
 {
   int sock = 0, clientSock = 0, fromlen = 0, bufLength = 0;
@@ -26,8 +66,8 @@ int main(int argc, char *argv[])
 
   // Create a IPv4 socket for streaming data
   sock = socket(AF_INET, SOCK_STREAM, 0);
-  memset(&serv_addr, '0', sizeof(serv_addr));
-  memset(sendBuff, '0', sizeof(sendBuff));
+  memset(&serv_addr, '\0', sizeof(serv_addr));
+  memset(sendBuff, '\0', sizeof(sendBuff));
 
   // Set the Sockets IP to any IPv4 address on port 5000
   serv_addr.sin_family = AF_INET;
@@ -60,12 +100,12 @@ int main(int argc, char *argv[])
 
     // Print Message
     recvBuff[bufLength] = 0;
-    printf("New Message (%d): %s\n", bufLength, recvBuff);
+    const char* resp = parsePacket(&recvBuff);
     
-    // Respond to the client with the current time
+    // Respond to the client
     ticks = time(NULL);
-    snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
-    write(clientSock, sendBuff, strlen(sendBuff));
+    snprintf(sendBuff, sizeof(sendBuff), "%s\r\n", resp);
+    write(clientSock, sendBuff, sizeof(sendBuff));
   
   }
 }
