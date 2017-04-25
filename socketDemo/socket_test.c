@@ -13,7 +13,7 @@
 #define MAX_PACKET_SIZE 1025
 
 // Define Socket Port
-#define SOCK_PORT 5000
+#define SOCK_PORT 8888
 
 int main(int argc, char *argv[])
 {
@@ -41,7 +41,8 @@ int main(int argc, char *argv[])
   listen(sock, 1);
 
   // Wait for connnection
-  printf("\n Waiting for a connection \n");
+  printf("Waiting for a connection \n");
+  printf("Port: %d\n", SOCK_PORT);
   fromlen = sizeof(struct sockaddr_in);
   
   clientSock = accept(sock, (struct sockaddr*)NULL, NULL);
