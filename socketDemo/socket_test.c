@@ -20,15 +20,21 @@ void setWheelSpeed(float wheelLeft, float wheelRight){
   printf("\tSetting Wheel Speeds (%f, %f)\n", wheelLeft, wheelRight);
 }
 
-const char * readSonar(char *sonar){
+const char * readSonar(){
   // Read Sonar Values
-  sonar = "1,2,5,3";
+  time_t ticks = time(NULL);
+  static char sonar[MAX_PACKET_SIZE];
+  sprintf(sonar, "%.24s", ctime(&ticks));
+
+  // Display Response
+  printf("%s\n", sonar);
   return sonar;
 }
 
 const char * parsePacket(const void *packet){
   // Copy packet into buffer
   char buff[MAX_PACKET_SIZE];
+  char resp[MAX_PACKET_SIZE];
   const char dlm[] = ",";
   memcpy(buff, packet, strlen(packet)+1);
 
@@ -48,10 +54,11 @@ const char * parsePacket(const void *packet){
     // Report Success
     return "done";
   }
- //else if(strcmp(cmd, "readSonar") == 0){
- //  // Return Sonar Readings
- //  return readSonar();
- //}
+ else if(strcmp(cmd, "readSonar") == 0){
+   // Return Sonar Readings
+   const char * resp = readSonar();
+   return resp;
+ }
 
 }
 
