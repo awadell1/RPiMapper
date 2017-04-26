@@ -4,6 +4,12 @@
 
 #include "processMsg.h"
 #include "msg_id.h"
+#include <wiringPI.h>
+#include <wiringPiI2C.h>
+#include <stdio.h>
+
+// Set up connecion to Arduino
+int fd = -1;
 
 // Process MSG
 int processMsg(char sendBuff[], const char* msg) {
@@ -47,4 +53,32 @@ int processMsg(char sendBuff[], const char* msg) {
     strncpy(sendBuff+startIndex, resp, respLen);
 
     return status;
+}
+
+int pollArduino(int buffer[], const int msg){
+    // Check that Wiring Pi is set up
+    if (fd == -1){
+        wiringPiSetup();
+        fd = wiringPiI2CSetup(ARDUINO_ADDRESS);
+    }
+
+    // Send msg to arduino
+    if (wiringPiI2CWrite(fd, msg) == -1){
+        return -1;
+    }
+
+    // Recieve Message from arduino
+    for(int i = 0; i < sizeof(buffer), i++){
+        int data = wiringPiI2CRead(fd);
+
+        // Add Data to buffer
+        if (data != -1){
+            buffer[i] = data;
+        } else {
+            break;
+        }
+    }
+
+    // Return size of buffer
+    return i;
 }
