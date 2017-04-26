@@ -11,3 +11,6 @@
 *.gch
 
 *.sublime-*
+
+*/cmake-build-debug
+*/.idea
