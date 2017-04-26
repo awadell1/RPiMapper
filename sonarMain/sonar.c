@@ -1,15 +1,19 @@
-//Handles polling of the Sonar Sensors and Response to the QTI Sensors
-//Also contains macros defining behavior and pin locations
+//Define CPU Speed
+#define F_CPU 16000000UL
 
+//Include relevant Libraries
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <util/delay.h>
 
-#ifndef SONAR_H
-#define SONAR_H
+//Comment out to disable serial debugging
+//#define debugOn
 
-//Include for access to Motor Speed Control Functiona and related macros
-#include "Motors.h"
+//Only include the serial library if debug mode is activated
+#ifdef debugOn
+#include "serial.h"
+#endif
 
-//Include for access to LastSeen and related Macros
-#include "States.h"
 //////////////////////////////////////////////////////////////////////////
 ////					SENSOR CONFIG DEFINITIONS					//////
 //////////////////////////////////////////////////////////////////////////
@@ -27,11 +31,6 @@
 
 //Define the Reading the Sonar can accurately make
 #define MaxDistance 4370	//Per the Datasheet the sonar can only measure up to 3 m
-
-//Define QTI Pins
-#define QTILeft (1 << PB0)
-#define QTIRight (1 << PB2)
-#define QTIBack (1 << PB1)
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -159,51 +158,125 @@ ISR(PCINT1_vect){
 	//////////////////////////////////////////////////////////////////////////
 	
 	//Update SonarPinsLast to Current Pin State
-	SonarPinsLast = PinsCurrent;
-	
+	SonarPinsLast = PinsCurrent;	
 }
 
-//Interrupt to handle responding to the QTI Sensors
-ISR(PCINT0_vect){
-	//Disable the pin change interrupts for QTI pins
-	PCMSK0 &= ~((1 << PCINT0) | (1 << PCINT1) | (1 << PCINT2)) ;
+//Set Up I/O and enable interrupts for running the Sonar Array 
+void SetupSonar(void){
+	// Setup Forward Sonar
+	//Set Timer 1 Pre-scaler to 64
+	TCCR1B |= (1  << CS11) | (1 << CS10);
 	
-	//Sample QTI Sensor Continuously and take evasive action until all sensors read black
-	while(!(PINB & QTILeft) || !(PINB & QTIRight) || !(PINB & QTIBack)) {
-		if (!(PINB & QTILeft) && (PINB & QTIRight)){
-			//Line on Front Left Side -> Spin Right
-			setMotorSpeed(RightMotor | DriveBackward, MotorMaxSpeed);
-			setMotorSpeed(LeftMotor | DriveForward, MotorMaxSpeed);
-			
-			//Set Flag to Spin Right (away from boundary) during Scan
-			LastSeen = SpotRight;
-		}
-		else if((PINB & QTILeft) && !(PINB & QTIRight)){
-			//Line on Front Right Side -> Spin Left
-			setMotorSpeed(LeftMotor | DriveBackward, MotorMaxSpeed);
-			setMotorSpeed(RightMotor | DriveForward, MotorMaxSpeed);
-			
-			//Set Flag to Spin Left (away from boundary) during Scan
-			LastSeen = SpotLeft;
-		}
-		else if(!(PINB & QTILeft) && !(PINB & QTIRight)){
-			//Line dead ahead -> Drive Backwards
-			setMotorSpeed(LeftMotor | DriveBackward, MotorMaxSpeed - 20); //Turn slightly left so that we don't end up bouncing
-			setMotorSpeed(RightMotor | DriveBackward, MotorMaxSpeed);
-		}
-		else if (!(PINB & QTIBack)){
-			//Line in Rear -> Drive Forwards
-			setMotorSpeed(LeftMotor | DriveForward, MotorMaxSpeed);
-			setMotorSpeed(RightMotor | DriveForward, MotorMaxSpeed);
-		}	
-	}
+	//Enables Pin Change interrupts for Port C
+	PCICR |= (1 << PCIE1);
+
+	//Set OCR1A to 30 mS
+	OCR1A = 7500;
 	
-	//Re-enable pin change interrupts for QTI
-	PCMSK0 |= ((1 << PCINT0) | (1 << PCINT1) | (1 << PCINT2)) ;
+	//Set Timer 1 to Clear Timer on Compare 
+	TCCR1B |= (1 << WGM12);
+	
+	//Turn on Interrupts for OCR1A, OCR1B
+	TIMSK1 |= (1 << OCIE1A);
 }
 
 //Functions to take care of setup of Sonar Sensors
 void SetupSonar(void);
 void SetupQTI(void);
+
+int main(void){
+	//Start Serial Communication if Debugging Mode is activated
+	#ifdef debugOn
+		init_uart();
+		printf("Debugging Mode is Active\r\n");
+	#endif
+	
+	//Set Pin 13 (On-board LED) to output mode
+	DDRB |= (1 << PB5);
+	
+	
+	//////////////////////////////////////////////////////////////////////////
+	/////						Run Set Up Functions					//////
+	//////////////////////////////////////////////////////////////////////////
+	
+	SetupDriveMotors();
+	SetupSonar();
+	SetupQTI();
+	
+	//////////////////////////////////////////////////////////////////////////
+	
+	//Enable Interrupts
+	sei();
+	
+	//Set start Mode to Scan
+	Scan();
+	
+	//Define variable to store current robot state while debugging
+	#ifdef debugOn
+		//Variable to Store Current State during Debug
+		unsigned short StateID = ScanState;
+	#endif
+	
+	//Begin Infinite Loop
+	while(1)
+    {
+		
+		if ((SonarReading[SonarForward] == SonarError) &&  (SonarReading[SonarLeft] == SonarError) && (SonarReading[SonarRight] == SonarError)){
+			//None of the Sonars see anything -> Switch to scan mode
+			Scan();
+			
+			//Update Current State for Debugging
+			#ifdef debugOn
+				StateID = ScanState;
+			#endif
+		}
+		else if ((SonarReading[SonarForward] >= FarDistance) &&  (SonarReading[SonarLeft] >= FarDistance) && (SonarReading[SonarRight] >= FarDistance)) {
+			//None of the Sonars see anything -> Switch to scan mode
+			Scan();
+			
+			//Update Current State for Debugging
+			#ifdef debugOn
+				StateID = ScanState;
+			#endif
+
+		}
+		else if (SonarReading[SonarForward] < AttackDistance) {
+			//Within Attack Range -> Trigger Attack State
+			Attack();
+			
+			//Update Current State for Debugging
+			#ifdef debugOn
+				StateID = AttackState;
+			#endif			
+
+		}
+		else{
+			//Spotted Target but not within Attack Range -> Home in on target
+			Home(SonarReading);
+			
+			//Update Current State for Debugging
+			#ifdef debugOn
+				StateID = HomeState;
+			#endif
+		}
+		
+		//Report Sonar Readings and Sate over Serial in CSV format -> Use ReadSonar.M to plot in realtime
+		#ifdef debugOn
+			printf("%u,",SonarReading[SonarForward]);
+			printf("%u,",SonarReading[SonarLeft]);
+			printf("%u,",SonarReading[SonarRight]);
+			printf("%u\r\n",StateID);
+			
+			//Serial is really slow -> Need extra delay to transmit
+			_delay_ms(100);
+		#endif
+		
+		//Required Delay for Sonar Loop, Do Not Remove or Reduce
+		_delay_ms(30);
+		
+		//Toggle LED to indicate end of cycle
+		PORTB ^= (1<<PB5);
+    }
+}
 
 #endif /* INCFILE1_H_ */
