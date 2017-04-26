@@ -88,7 +88,7 @@ classdef Robot < handle
 			end
 			
 			% Connect to Pi
-			obj.robotPort = tcpclient(robotAddress, 1611);
+			obj.robotPort = tcpclient(robotAddress, 1618);
 			
 			% Check connection
 			resp = obj.sendPacket('CSS');
