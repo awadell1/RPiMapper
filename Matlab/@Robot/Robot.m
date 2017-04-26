@@ -88,7 +88,13 @@ classdef Robot < handle
 			end
 			
 			% Connect to Pi
-			obj.robotPort = tcpclient(robotAddress, 8888);
+			obj.robotPort = tcpclient(robotAddress, 1611);
+			
+			% Check connection
+			resp = obj.sendPacket('CSS');
+			if strncmp(resp, 'CSS', 3)
+				fprintf('Connected!\n');
+			end
 			
 		end
 		
@@ -151,7 +157,7 @@ classdef Robot < handle
 			end
 		end
 		
-		function response = sendPacket(obj, varargin)
+		function [response, time] = sendPacket(obj, varargin)
 			
 			% Create Packet
 			packet = sprintf(varargin{:});
@@ -160,8 +166,14 @@ classdef Robot < handle
 			obj.robotPort.write(uint8(packet));
 			
 			% Read Response
-			response = obj.robotPort.read(1026, 'uint8');
-			response = char(response);
+			msg = obj.robotPort.read(1026, 'uint8');
+			
+			% Drop Trailing Zeros
+			msg(1+find(msg, 1, 'last'):end) = [];
+			
+			% Extract Response and Time Stamp
+			response = char(msg(9:end));
+			time = typecast(msg(1:8), 'double');
 		end
 		
 		%% Define External Functions
@@ -283,6 +295,9 @@ classdef Robot < handle
 					% Stop the Robot
 					robot.SetFwdVelAngVel(0, 0);
 				end
+				
+				% Disconnect from Robot
+				robot.sendPacket('SDC');
 			catch
 				warning('Unable to stop the robot')
 			end

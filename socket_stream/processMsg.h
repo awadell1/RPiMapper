@@ -8,5 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-//void processMsg(const char& sendBuff, const char* msg);
+// Set the max size of messages to be sent
+#define MAX_MSG_SIZE 1026
+
+// Declare Functions
+int processMsg(char sendBuff[], const char* msg);
+
 #endif //SOCKET_STREAM_PROCESSMSG_H

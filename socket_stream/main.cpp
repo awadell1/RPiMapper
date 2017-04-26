@@ -7,21 +7,15 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <iostream>
+#include <chrono>
 
-// Set the max size of messages to be sent
-#define MAX_MSG_SIZE 256
+// Header Files
+#include "processMsg.h"
 
 // Define Port to listen on
-#define RPI_PORT 1618
+#define RPI_PORT 1611
 
-// Process MSG
-void processMsg(char sendBuff[], const char* msg){
-    // Report Message
-    printf("\tMSG: %s\n", msg);
 
-    // Return message
-    strcpy(sendBuff, msg);
-}
 
 void error(const char *msg)
 {
@@ -39,7 +33,9 @@ int main(int argc, char *argv[])
 
     // Open Socket
     struct sockaddr_in serv_addr, cli_addr;
+    int option =1;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
     if (sockfd < 0) error("ERROR opening socket");
 
     // Set Address and Port Number
@@ -66,12 +62,18 @@ int main(int argc, char *argv[])
     }
     printf("SUCCESS: Client Connected\n");
 
+    // Start Connection Timer
+    std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
+
     // Create Buffer for reading and sending messages
     char sendBuff[MAX_MSG_SIZE];
     char recvBuff[MAX_MSG_SIZE];
 
     bool isAlive = true;    // Flag for client is still connected
     _ssize_t n;             // Length of received/sent message
+    int msgStatus = -1;     // Response from processMsg
+    double respTime;        // Stores the time at which the msg is responded too (roughly), in seconds since start
+    int errorCount = 0;
     while (isAlive){
         // Clear the buffers
         bzero(sendBuff, sizeof(sendBuff));
@@ -83,21 +85,29 @@ int main(int argc, char *argv[])
         // Check for receive error
         if (n<0){
             printf("ERROR: Reading message from socket\n");
+            errorCount++;
         } else {
             // Display message
             printf("RECV: %s\n", recvBuff);
 
+            // Append Msg with Receive time
+            std::chrono::duration<double> elapsed_seconds = std::chrono::steady_clock::now()  - startTime;
+            respTime = elapsed_seconds.count();
+            memcpy(&sendBuff, &respTime, sizeof(respTime));
+
             // Process message
-            processMsg(sendBuff, recvBuff);
+            msgStatus = processMsg(sendBuff, recvBuff);
 
             // Report Success
             n = write(clientfd, sendBuff, sizeof(sendBuff));
             if (n < 0) printf("ERROR: Unable to write to client");
 
-            // Exit
-            isAlive = false;
+            // Check for Exit Flag
+            if(msgStatus < 0) isAlive = false;
         }
 
+        // Check for too many errors
+        if(errorCount > 20) isAlive = false;
     }
 
     // Close the connection
