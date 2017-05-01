@@ -11,15 +11,16 @@
 #define nSonar 3
 
 //Define Sonar Pins
-#define Sonar1 (1 << PC0)
-#define Sonar2 (1 << PC1)
-#define Sonar3 (1 << PC2)
+#define SonarTrig (1 << PC0)
+#define Sonar1 (1 << PC1)
+#define Sonar2 (1 << PC2)
+#define Sonar3 (1 << PC3)
 
 //Define the Error Value used to indicate invalid readings
 #define SonarError 65355
 
 //Define the Reading the Sonar can accurately make
-#define MaxDistance 4370	//Per the Datasheet the sonar can only measure up to 3 m
+#define MaxDistance 65355	//Per the Datasheet the sonar can only measure up to 3 m
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -44,6 +45,9 @@ volatile unsigned short SonarPinsLast = 0;
 ISR(TIMER1_COMPA_vect){
 	//Disable interrupts for Sonar Pins
 	PCMSK1 &= ~(Sonar1 | Sonar2 | Sonar3);
+
+	//Toggle LED to indicate start of cycle
+	PORTB ^= (1<<PB5);
 	
 	//Clean up Sonar Readings
 	for(int SonarIndex = 0; SonarIndex < nSonar; SonarIndex++){
@@ -61,23 +65,23 @@ ISR(TIMER1_COMPA_vect){
 	//Trigger the Next Sonar Readings
 	//////////////////////////////////////////////////////////////////////////
 	
-	//Set Sonar Pins to Output
-	DDRC |= Sonar1 | Sonar2 | Sonar3;
+	//Set Sonar Trigger Pins to Output
+	DDRC |= SonarTrig;
 	
 	//Set Sonar Pins low to force clean pulse
-	PORTC &= ~(Sonar1 | Sonar2 | Sonar3);
+	PORTC &= ~SonarTrig;
 	
 	//Wait 2 uS
 	_delay_us(2);
 
 	//Set Sonar Pins High to start Pulse
-	PORTC |= Sonar1 | Sonar2 | Sonar3;
+	PORTC |= SonarTrig;
 	
 	//Wait 5 uS per Sonar Datasheet
 	_delay_us(5);
 	
 	//Set Sonar Pins Low to end pulse
-	PORTC &= ~(Sonar1 | Sonar2 | Sonar3);
+	PORTC &= ~SonarTrig;
 	
 	//Set Sonar Pins to Input
 	DDRC &= ~(Sonar1 | Sonar2 | Sonar3);

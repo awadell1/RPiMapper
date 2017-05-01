@@ -2,6 +2,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <Wire.h>
 
 //Comment out to disable serial debugging
 #define debugOn
@@ -26,6 +27,7 @@ int main(void){
 	//////////////////////////////////////////////////////////////////////////
 	
 	SetupSonar();
+	SetupI2C();
 	
 	//////////////////////////////////////////////////////////////////////////
 	
@@ -35,21 +37,8 @@ int main(void){
 	//Begin Infinite Loop
 	while(1)
     {
-		//Report Sonar Readings and Sate over Serial in CSV format -> Use ReadSonar.M to plot in realtime
-		#ifdef debugOn
-			char buffer[126];
-			sprintf(buffer, "%u, %u, %u\n", SonarReading[0], SonarReading[1],SonarReading[2]);
-			Serial.print(buffer);
-			
-			//Serial is really slow -> Need extra delay to transmit
-			_delay_ms(500);
-		#endif
-		
 		//Required Delay for Sonar Loop, Do Not Remove or Reduce
 		_delay_ms(30);
-		
-		//Toggle LED to indicate end of cycle
-		PORTB ^= (1<<PB5);
     }
 }
 
@@ -67,7 +56,51 @@ void SetupSonar(void){
 	
 	//Set Timer 1 to Clear Timer on Compare 
 	TCCR1B |= (1 << WGM12);
+
+	//Set Sonar Pins to Input
+	DDRC &= ~(Sonar1 | Sonar2 | Sonar3);
 	
 	//Turn on Interrupts for OCR1A, OCR1B
 	TIMSK1 |= (1 << OCIE1A);
+}
+
+void SetupI2C(void){
+	// Enable Wire and set address to 1
+	Wire.begin(1);
+
+	// Set Handler
+	Wire.onReceive(I2C_Request);
+}
+
+void I2C_Request(int numBytes){
+	// Report Recieving
+	Serial.print("RCV: ");
+
+	// Step through commands
+	while(Wire.available()){
+		// Read Next Commands
+		int cmd = (int)Wire.read();
+		Serial.print(cmd);
+		Serial.print("\n");
+
+		// Respond to Command
+		if (cmd == 1){
+			// Cast Sonar Readings as a char
+			char * sonar = (char)&SonarReading;
+			// Return Sonar Readings
+			Wire.write(sonar, sizeof(sonar));
+			Serial.print("\t Sonar:");
+			Serial.print(sonar);
+
+			// Report Sonar Reading
+			char buff[64];
+			snprintf(buff, sizeof(buff), "Sonar: %u", SonarReading[0]);
+			Serial.print(buff);
+		}
+		else {
+			// Report Error
+			Wire.write("ERRORL Invalid Command");
+		}
+
+	}
 }
