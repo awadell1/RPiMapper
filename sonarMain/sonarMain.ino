@@ -80,8 +80,6 @@ void I2C_Request(int numBytes){
 	while(Wire.available()){
 		// Read Next Commands
 		int cmd = (int)Wire.read();
-		Serial.print(cmd);
-		Serial.print("\n");
 
 		// Respond to Command
 		if (cmd == 1){
@@ -94,12 +92,7 @@ void I2C_Request(int numBytes){
 			}
 			
 			// Return Sonar Readings
-			Wire.write(1);
-			#ifdef debugOn
-				Serial.print("\t Sonar:");
-				Serial.print(sonar);
-				Serial.print("\n");
-			#endif
+			Wire.write(sonar, sizeof(sonar));
 		}
 		else {
 			// Report Error
