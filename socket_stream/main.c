@@ -32,15 +32,18 @@
 // Set the number of sonars
 #define NUM_SONAR 3
 
+// Set the Arduino Address
+#define ARDUINO_I2C 0x05
+
 // Global variables
-int i2c_arduino
+int i2c_arduino = 0;
 
 // Declare Functions
-int processMsg(char sendBuff[], const char* msg)
+int processMsg(char sendBuff[], const char* msg);
 
-int parseSonarData(char sendBuff[], const int* sonarData, int dataSize)
+int parseSonarData(char sendBuff[], const int* sonarData, int dataSize);
 
-int pollArduino(int buffer[], const int msg)
+int pollArduino(int buffer[], const int msg);
 
 void error(const char *msg)
 {
@@ -51,7 +54,7 @@ void error(const char *msg)
 int main(int argc, char *argv[])
 {
     // Setup I2C Connection to Arduino
-    i2c_arduino = wiringPiI2CSetup(1);
+    i2c_arduino = wiringPiI2CSetup(ARDUINO_I2C);
    
     // Create variables to store connection information
     int sockfd;         // sockfd:      Server Socket File
@@ -94,7 +97,6 @@ int main(int argc, char *argv[])
     time_t startTime = time(NULL);
 
     // Create Buffer for reading and sending messages
-    buffer sendBuff = {char }
     char sendBuff[MAX_MSG_SIZE];
     char recvBuff[MAX_MSG_SIZE];
 
@@ -163,13 +165,13 @@ int processMsg(char sendBuff[], const char* msg) {
         status = -1;
     } else if (strncmp(msg, GET_RANGE_READING, 3) == 0) {
         // Request Sonar Readings from Arduino
-        int sonarData[128] = 0;
+        int sonarData[128];
         int dataSize = pollArduino(sonarData, 1);
 
         // Check if read was successful
         if(dataSize>0){
             // Parse Sonar Readings
-            status = parseSonarData(sendBuff, sonarData, dataSize)
+            status = parseSonarData(sendBuff, sonarData, dataSize);
         } else{
             status = -1;
         }
@@ -206,8 +208,9 @@ int pollArduino(int buffer[], const int msg){
     }
 
     // Receive Message from arduino
-    for(int i = 0; i < sizeof(buffer), i++){
-        int data = wiringPiI2CRead(fd);
+    int i;
+    for(i = 0; i < sizeof(buffer); i++){
+        int data = wiringPiI2CRead(i2c_arduino);
 
         // Add Data to buffer
         if (data != -1){
@@ -221,22 +224,16 @@ int pollArduino(int buffer[], const int msg){
     return i;
 }
 
-int parseSonarData(char sendBuff[], const int* sonarData, int dataSize){
+int parseSonarData(char sendBuff[], const int sonarData[], int dataSize){
     // Recast Sonar data as an unsigned long
-    unsigned long * sonar = (unsigned long)&sonarData;
+    char * sonar = (char*) sonarData;
 
     // Compute Range
-    double sonarRange
+    double sonarRange;
     printf("\nSonar Reading: ");
-    for (int i = 0; i < sizeof(sonar); i++){
-        // Divide by magic number to get range
-        sonarRange = sonar[i] / 750;
-
-        // Print range to console
-        printf("%3.f, ", sonarRange);
-
-        // Append to send buffer
-        strcat(sendBuff, sonarRange);
+    int i;
+    for (i = 0; i < dataSize; i++ ){
+      printf("%d ", sonarData[i]);
     }
     printf("\n");
 
