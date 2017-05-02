@@ -85,17 +85,18 @@ void I2C_Request(int numBytes){
 
 		// Respond to Command
 		if (cmd == 1){
-			// Cast Sonar Readings as a char
-			char * sonar = (char)&SonarReading;
+			// Convert Sonar Readings to char array
+			char sonar[1028]; memset(&sonar[0], 0, sizeof(sonar));
+			for(int i = 0; i < nSonar; i++){
+				snprintf(sonar+strlen(sonar), sizeof(sonar), "%u ", SonarReading[i]);
+			}
+			
 			// Return Sonar Readings
-			Wire.write(sonar, sizeof(sonar));
-			Serial.print("\t Sonar:");
-			Serial.print(sonar);
-
-			// Report Sonar Reading
-			char buff[64];
-			snprintf(buff, sizeof(buff), "Sonar: %u", SonarReading[0]);
-			Serial.print(buff);
+			Wire.write(sonar, strlen(sonar));
+			#ifdef debugOn
+				Serial.print("\t Sonar:");
+				Serial.print(sonar);
+			#endif
 		}
 		else {
 			// Report Error
