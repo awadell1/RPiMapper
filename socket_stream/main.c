@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <wiringPiI2C.h>
 
 // Set the Wheel Speeds
 #define SET_WHEEL_SPEED "SWV"
@@ -28,6 +29,9 @@
 // Set the max size of messages to be sent
 #define MAX_MSG_SIZE 1026
 
+// Global variables
+int i2c_arduino
+
 // Declare Functions
 int processMsg(char sendBuff[], const char* msg);
 
@@ -39,6 +43,9 @@ void error(const char *msg)
 
 int main(int argc, char *argv[])
 {
+    // Setup I2C Connection to Arduino
+    i2c_arduino = wiringPiI2CSetup(1);
+   
     // Create variables to store connection information
     int sockfd;         // sockfd:      Server Socket File
     int clientfd;       // clientfd:    Socket to client
@@ -147,8 +154,9 @@ int processMsg(char sendBuff[], const char* msg) {
         strncpy(resp, "Goodbye", 7);
         status = -1;
     } else if (strncmp(msg, GET_RANGE_READING, 3) == 0) {
-        strncpy(resp, "Goodbye", 7);
-        status = -1;
+        // Request Sonar Readings from Arduino
+        wiringPi
+        status = 1;
     } else if (strncmp(msg, GET_IMU_READING, 3) == 0) {
         strncpy(resp, "Goodbye", 7);
         status = -1;
