@@ -7,9 +7,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-// Header Files
-#include "processMsg.h"
-
 // Set the Wheel Speeds
 #define SET_WHEEL_SPEED "SWV"
 
@@ -87,7 +84,7 @@ int main(int argc, char *argv[])
     char recvBuff[MAX_MSG_SIZE];
 
     int isAlive = 1;    // Flag for client is still connected
-    _ssize_t n;             // Length of received/sent message
+    size_t n;             // Length of received/sent message
     int msgStatus = -1;     // Response from processMsg
     double respTime;        // Stores the time at which the msg is responded too (roughly), in seconds since start
     int errorCount = 0;
