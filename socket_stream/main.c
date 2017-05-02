@@ -36,7 +36,11 @@
 int i2c_arduino
 
 // Declare Functions
-int processMsg(char sendBuff[], const char* msg);
+int processMsg(char sendBuff[], const char* msg)
+
+int parseSonarData(char sendBuff[], const int* sonarData, int dataSize)
+
+int pollArduino(int buffer[], const int msg)
 
 void error(const char *msg)
 {
