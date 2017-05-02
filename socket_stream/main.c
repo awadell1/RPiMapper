@@ -41,9 +41,9 @@ int i2c_arduino = 0;
 // Declare Functions
 int processMsg(char sendBuff[], const char* msg);
 
-int parseSonarData(char sendBuff[], const int* sonarData, int dataSize);
+int parseSonarData(char sendBuff[], const char* sonarData, int dataSize);
 
-int pollArduino(int buffer[], const int msg);
+int pollArduino(char buffer[], const int msg);
 
 void error(const char *msg)
 {
@@ -165,7 +165,7 @@ int processMsg(char sendBuff[], const char* msg) {
         status = -1;
     } else if (strncmp(msg, GET_RANGE_READING, 3) == 0) {
         // Request Sonar Readings from Arduino
-        int sonarData[128];
+        char sonarData[128];
         int dataSize = pollArduino(sonarData, 1);
 
         // Check if read was successful
@@ -201,7 +201,7 @@ int processMsg(char sendBuff[], const char* msg) {
     return status;
 }
 
-int pollArduino(int buffer[], const int msg){
+int pollArduino(char buffer[], const int msg){
     // Send msg to arduino
     if (wiringPiI2CWrite(i2c_arduino, msg) == -1){
         return -1;
@@ -209,33 +209,25 @@ int pollArduino(int buffer[], const int msg){
 
     // Receive Message from arduino
     int i;
-    for(i = 0; i < sizeof(buffer); i++){
-        int data = wiringPiI2CRead(i2c_arduino);
-
-        // Add Data to buffer
-        if (data != -1){
-            buffer[i] = data;
-        } else {
-            break;
+    int data = 0;
+    while (data != 1 && i < sizeof(buffer)){
+        // Read next byte
+        data = wiringPiI2CRead(i2c_arduino);
+    
+        // Check for end of message
+        if (data != 1){
+            buffer[i] = (char)data;
+            i++;
         }
     }
-
+    
     // Return size of buffer
     return i;
 }
 
-int parseSonarData(char sendBuff[], const int sonarData[], int dataSize){
-    // Recast Sonar data as an unsigned long
-    char * sonar = (char*) sonarData;
-
-    // Compute Range
-    double sonarRange;
-    printf("\nSonar Reading: ");
-    int i;
-    for (i = 0; i < dataSize; i++ ){
-      printf("%d ", sonarData[i]);
-    }
-    printf("\n");
-
+int parseSonarData(char sendBuff[], const char sonarData[], int dataSize){
+    // Print Sonar Data
+    printf("Sonar: %s\n", sonarData);
+   
     return 1;
 }
