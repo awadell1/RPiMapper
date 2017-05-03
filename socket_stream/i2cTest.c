@@ -27,8 +27,14 @@ void main() {
         /* ERROR HANDLING; you can check errno to see what went wrong */
         exit(1);
     }
-
+    
+    
     char buf[1028] = {0};
+    // Write to arduino
+    buf[0] = 0x05;
+    buf[1] = 'A';
+    write(file, buf, 6);
+
     // Using I2C Read
     if (read(file, buf, sizeof(buf)) <0) {
         /* ERROR HANDLING: i2c transaction failed */
