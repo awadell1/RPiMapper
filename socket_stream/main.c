@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
 
 // Set the Wheel Speeds
 #define SET_WHEEL_SPEED "SWV"
@@ -41,14 +42,20 @@
 #define ARDUINO_I2C 0x05
 
 // Global variables
-int i2c_bus = 0;
-
+int i2c_bus = 0;        // File handle for i2c bus
+int sockfd = 0;         // File handle for server socket
+int clientfd = 0;       // File handle for client socket
+ 
 // Declare Functions
+void sighandler(int signum);
+
 int processMsg(char sendBuff[], const char* msg);
 
-int parseSonarData(char sendBuff[], const char* sonarData, int dataSize);
+int parseSonarData(char sendBuff[], const char* sonarData);
 
-int pollArduino(char buffer[], const int msg);
+int pollArduino(char buffer[], const char msg[]);
+
+int openI2C();
 
 void error(const char *msg)
 {
@@ -58,12 +65,13 @@ void error(const char *msg)
 
 int main(int argc, char *argv[])
 {
+    // Setup Signal Handler
+    signal(SIGINT, sighandler);
+
     // Setup I2C Connection to Arduino
     if (openI2C() != 1) {return -1;}
    
     // Create variables to store connection information
-    int sockfd;         // sockfd:      Server Socket File
-    int clientfd;       // clientfd:    Socket to client
     int portno;         // portno:      The port the server listens on
     socklen_t clilen;   // clilen:      The length of the client address
 
@@ -170,8 +178,8 @@ int processMsg(char sendBuff[], const char* msg) {
         status = -1;
     } else if (strncmp(msg, GET_RANGE_READING, 3) == 0) {
         // Request Sonar Readings from Arduino
-        char sonarData[128];
-        int dataSize = pollArduino(sonarData, 1);
+        char sonarData[MAX_MSG_SIZE];
+        int dataSize = pollArduino(sonarData, "s");
 
         // Check if read was successful
         if(dataSize>0){
@@ -206,14 +214,15 @@ int processMsg(char sendBuff[], const char* msg) {
     return status;
 }
 
-int pollArduino(char buffer[], const int msg){
+int pollArduino(char buffer[], const char msg[]){
     // Send msg to arduino
-    if (write(i2c_bus, buf, sizeof(buf)) == -1){
+    int n = write(i2c_bus, msg, sizeof(msg));
+    if (n == -1){
         return -1;
     }
 
     // Receive Message from arduino
-    if (read(file, buffer, sizeof(buffer)) <0) {
+    if (read(i2c_bus, buffer, sizeof(buffer)) <0) {
         /* ERROR HANDLING: i2c transaction failed */
         printf("Failed to read from the i2c bus.\n");
         printf(buffer);
@@ -228,7 +237,7 @@ int pollArduino(char buffer[], const int msg){
     }
 
     // Return size of buffer
-    return strnlen(buffer);
+    return strlen(buffer);
 }
 
 int parseSonarData(char sendBuff[], const char sonarData[]){
@@ -244,6 +253,7 @@ int openI2C(){
         printf("Failed to open the bus.");
         /* ERROR HANDLING; you can check errno to see what went wrong */
         return -1;
+    close(i2c_bus);
     }
 
     // Attempt to talk to Slave
@@ -255,4 +265,14 @@ int openI2C(){
 
     // Success
     return 1;
+}
+
+void sighandler(int signum){
+    // Close everything
+    close(i2c_bus);
+    close(sockfd);
+    close(clientfd);
+    
+    // Exit
+    exit(-1);    
 }
