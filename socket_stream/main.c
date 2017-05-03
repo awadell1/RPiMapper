@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 
             // Prepend Msg with Receive time
             respTime = time(NULL) - startTime;
-            strcat(sendBuff, ctime(&respTime));
+            sprintf(sendBuff, "%f ", respTime);
 
             // Process message
             msgStatus = processMsg(sendBuff, recvBuff);
@@ -188,6 +188,7 @@ int processMsg(char sendBuff[], const char* msg) {
 
             // Append to sendBuff
             strcat(sendBuff, sonarData);
+            strcat(sendBuff, " ");
         }
 
         return status;
