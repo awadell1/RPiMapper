@@ -6,7 +6,12 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <wiringPiI2C.h>
+#include <errno.h>
+#include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 // Set the Wheel Speeds
 #define SET_WHEEL_SPEED "SWV"
