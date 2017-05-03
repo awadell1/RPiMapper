@@ -172,8 +172,7 @@ classdef Robot < handle
 			msg(1+find(msg, 1, 'last'):end) = [];
 			
 			% Extract Response and Time Stamp
-			response = char(msg(9:end));
-			time = typecast(msg(1:8), 'double');
+			response = char(msg);
 		end
 		
 		%% Define External Functions

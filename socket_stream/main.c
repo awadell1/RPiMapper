@@ -216,7 +216,7 @@ int processMsg(char sendBuff[], const char* msg) {
 
 int pollArduino(char buffer[], const char msg[]){
     // Send msg to arduino
-    int n = write(i2c_bus, msg, sizeof(msg));
+    int n = write(i2c_bus, msg, strlen(msg));
     if (n == -1){
         return -1;
     }
