@@ -30,7 +30,7 @@ void main() {
 
     char buf[1028] = {0};
     // Using I2C Read
-    if (read(file,buf, sizeof(buf)) <0) {
+    if (read(file, buf, sizeof(buf)) <0) {
         /* ERROR HANDLING: i2c transaction failed */
         printf("Failed to read from the i2c bus.\n");
         printf(buffer);

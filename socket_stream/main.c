@@ -36,7 +36,7 @@
 #define ARDUINO_I2C 0x05
 
 // Global variables
-int i2c_arduino = 0;
+int i2c_bus = 0;
 
 // Declare Functions
 int processMsg(char sendBuff[], const char* msg);
@@ -54,7 +54,7 @@ void error(const char *msg)
 int main(int argc, char *argv[])
 {
     // Setup I2C Connection to Arduino
-    i2c_arduino = wiringPiI2CSetup(ARDUINO_I2C);
+    if (openI2C() != 1) {return -1;}
    
     // Create variables to store connection information
     int sockfd;         // sockfd:      Server Socket File
@@ -171,7 +171,7 @@ int processMsg(char sendBuff[], const char* msg) {
         // Check if read was successful
         if(dataSize>0){
             // Parse Sonar Readings
-            status = parseSonarData(sendBuff, sonarData, dataSize);
+            status = parseSonarData(sendBuff, sonarData);
         } else{
             status = -1;
         }
@@ -203,31 +203,51 @@ int processMsg(char sendBuff[], const char* msg) {
 
 int pollArduino(char buffer[], const int msg){
     // Send msg to arduino
-    if (wiringPiI2CWrite(i2c_arduino, msg) == -1){
+    if (write(i2c_bus, buf, sizeof(buf)) == -1){
         return -1;
     }
 
     // Receive Message from arduino
-    int i;
-    int data = 0;
-    while (data != 1 && i < sizeof(buffer)){
-        // Read next byte
-        data = wiringPiI2CRead(i2c_arduino);
-    
-        // Check for end of message
-        if (data != 1){
-            buffer[i] = (char)data;
-            i++;
-        }
+    if (read(file, buffer, sizeof(buffer)) <0) {
+        /* ERROR HANDLING: i2c transaction failed */
+        printf("Failed to read from the i2c bus.\n");
+        printf(buffer);
+        printf("\n\n");
+        return -1;
+    } else {
+        // Clear chars after newline
+        buffer[strcspn(buffer, "\n")] = 0;
+
+        // Type case as unsigned long
+        printf("Msg: %s\n", buffer);
     }
-    
+
     // Return size of buffer
-    return i;
+    return strnlen(buffer);
 }
 
-int parseSonarData(char sendBuff[], const char sonarData[], int dataSize){
-    // Print Sonar Data
-    printf("Sonar: %s\n", sonarData);
+int parseSonarData(char sendBuff[], const char sonarData[]){
+    // Append Sonar Data
+    strcat(sendBuff, sonarData);
    
+    return 1;
+}
+
+int openI2C(){
+    // Open Connection to bus
+    if ((i2c_bus = open("/dev/i2c-1", O_RDWR)) < 0) {
+        printf("Failed to open the bus.");
+        /* ERROR HANDLING; you can check errno to see what went wrong */
+        return -1;
+    }
+
+    // Attempt to talk to Slave
+    if (ioctl(i2c_bus,I2C_SLAVE, ARDUINO_I2C) < 0) {
+        printf("Failed to acquire bus access and/or talk to slave.\n");
+        /* ERROR HANDLING; you can check errno to see what went wrong */
+        return -1;
+    }
+
+    // Success
     return 1;
 }
