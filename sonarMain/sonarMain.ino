@@ -95,10 +95,12 @@ void I2C_Receive(int numBytes){
 	// Parse Request
 	if(buff[0] == 's' && numBytes >= 2){
 		// Read sonar id
-		int sonar = atoi(buff[0] +1);
+		int sonar;
+		sscanf(buff+1, "%d", &sonar);
 
 		// Write back sonar reading
-		sprintf(i2c_buff, "%u\n", SonarReading[0]);
+		memset(i2c_buff, 0, sizeof(i2c_buff));
+		sprintf(i2c_buff, "%u\n", SonarReading[sonar]);
 	} else if(buff[1] == 'A'){
 		// Write back message
 		sprintf(i2c_buff, "Hello World\n");
