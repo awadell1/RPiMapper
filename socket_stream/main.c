@@ -36,7 +36,7 @@
 #define MAX_MSG_SIZE 1026
 
 // Set the number of sonars
-#define NUM_SONAR 3
+#define NUM_SONAR 8
 
 // Set the Arduino Address
 #define ARDUINO_I2C 0x05
@@ -50,8 +50,6 @@ int clientfd = 0;       // File handle for client socket
 void sighandler(int signum);
 
 int processMsg(char sendBuff[], const char* msg);
-
-int parseSonarData(char sendBuff[], const char* sonarData);
 
 int pollArduino(char buffer[], const char msg[]);
 
@@ -134,9 +132,9 @@ int main(int argc, char *argv[])
             // Display message
             printf("RECV: %s\n", recvBuff);
 
-            // Append Msg with Receive time
+            // Prepend Msg with Receive time
             respTime = time(NULL) - startTime;
-            memcpy(&sendBuff, &respTime, sizeof(respTime));
+            strcat(sendBuff, ctime(&respTime));
 
             // Process message
             msgStatus = processMsg(sendBuff, recvBuff);
@@ -179,15 +177,19 @@ int processMsg(char sendBuff[], const char* msg) {
     } else if (strncmp(msg, GET_RANGE_READING, 3) == 0) {
         // Request Sonar Readings from Arduino
         char sonarData[MAX_MSG_SIZE];
-        int dataSize = pollArduino(sonarData, "s1");
+        char cmd[32];
+        int i;
+        for(i=0; i < NUM_SONAR; i++){
+            // Construct Command 
+            sprintf(cmd, "s%d", i);
 
-        // Check if read was successful
-        if(dataSize>0){
-            // Parse Sonar Readings
-            status = parseSonarData(sendBuff, sonarData);
-        } else{
-            status = -1;
+            // Poll Arduino
+            int dataSize = pollArduino(sonarData, cmd);
+
+            // Append to sendBuff
+            strcat(sendBuff, sonarData);
         }
+
         return status;
     } else if (strncmp(msg, GET_IMU_READING, 3) == 0) {
         strncpy(resp, "Goodbye", 7);
@@ -238,13 +240,6 @@ int pollArduino(char buffer[], const char msg[]){
 
     // Return size of buffer
     return strlen(buffer);
-}
-
-int parseSonarData(char sendBuff[], const char sonarData[]){
-    // Append Sonar Data
-    strcat(sendBuff, sonarData);
-   
-    return 1;
 }
 
 int openI2C(){
