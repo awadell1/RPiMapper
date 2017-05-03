@@ -27,7 +27,19 @@ void main() {
         /* ERROR HANDLING; you can check errno to see what went wrong */
         exit(1);
     }
-  // Write cmd to Arduino
-  char buff[10] = {1};
-  write(file, buff, 1);
+
+    char buf[1028] = {0};
+    // Using I2C Read
+    if (read(file,buf, sizeof(buf)) <0) {
+        /* ERROR HANDLING: i2c transaction failed */
+        printf("Failed to read from the i2c bus.\n");
+        printf(buffer);
+        printf("\n\n");
+    } else {
+        // Clear chars after newline
+        //buf[strcspn(buf, "\n")] = 0;
+
+        // Type case as unsigned long
+        printf("Msg: %s\n",buf);
+    }
 }
