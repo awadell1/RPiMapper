@@ -8,7 +8,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 //The Number of Sonar Sensors Used
-#define nSonar 3
+#define nSonar 8
 
 //Define Sonar Pins
 #define SonarTrig (1 << PC0)

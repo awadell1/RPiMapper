@@ -5,7 +5,7 @@
 #include <Wire.h>
 
 //Comment out to disable serial debugging
-//#define debugOn
+#define debugOn
 
 // Sonar ISR
 #include "sonarInterupt.h"
@@ -69,35 +69,15 @@ void SetupI2C(void){
 	Wire.begin(0x05);
 
 	// Set Handler
-	Wire.onReceive(I2C_Request);
+	Wire.onRequest(I2C_Request);
 }
 
-void I2C_Request(int numBytes){
-	// Report Receiving
-	Serial.print("RCV: ");
-
-	// Step through commands
-	while(Wire.available()){
-		// Read Next Commands
-		int cmd = (int)Wire.read();
-
-		// Respond to Command
-		if (cmd == 1){
-			// Create Empty buffer for sonar readings
-			char sonar[1028]; memset(&sonar[0], 0, sizeof(sonar));
-
-			// Print sonar readings to array
-			for(int i = 0; i < nSonar; i++){
-				snprintf(sonar+strlen(sonar), sizeof(sonar), "%u ", SonarReading[i]);
-			}
-			
-			// Return Sonar Readings
-			Wire.write(sonar, sizeof(sonar));
-		}
-		else {
-			// Report Error
-			Wire.write("ERROR: Invalid Command");
-		}
-
+void I2C_Request(){
+	char buff[10];
+	for(int i = 0; i < nSonar; i++){
+		sprintf(buff,"%u ", SonarReading[i]);
+		Wire.write(buff);
 	}
+	Wire.write("\n");
+	return;
 }
