@@ -7,7 +7,7 @@
 !Makefile
 
 *.exe
-
+*.out
 *.gch
 
 *.sublime-*
