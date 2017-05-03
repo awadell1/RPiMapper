@@ -179,7 +179,7 @@ int processMsg(char sendBuff[], const char* msg) {
     } else if (strncmp(msg, GET_RANGE_READING, 3) == 0) {
         // Request Sonar Readings from Arduino
         char sonarData[MAX_MSG_SIZE];
-        int dataSize = pollArduino(sonarData, "s");
+        int dataSize = pollArduino(sonarData, "s1");
 
         // Check if read was successful
         if(dataSize>0){
@@ -230,7 +230,7 @@ int pollArduino(char buffer[], const char msg[]){
         return -1;
     } else {
         // Clear chars after newline
-        buffer[strcspn(buffer, "\n")] = 0;
+        //buffer[strcspn(buffer, "\n")] = 0;
 
         // Type case as unsigned long
         printf("Msg: %s\n", buffer);
