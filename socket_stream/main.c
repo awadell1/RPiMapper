@@ -51,7 +51,7 @@ void sighandler(int signum);
 
 int processMsg(char sendBuff[], const char* msg);
 
-int pollArduino(char buffer[], const char msg[]);
+int pollArduino(char buffer[], const char msg[], const int buffSize);
 
 int openI2C();
 
@@ -176,15 +176,16 @@ int processMsg(char sendBuff[], const char* msg) {
         status = -1;
     } else if (strncmp(msg, GET_RANGE_READING, 3) == 0) {
         // Request Sonar Readings from Arduino
-        char sonarData[MAX_MSG_SIZE];
-        char cmd[32];
+        int n = 16;
+        char sonarData[n];
+        char cmd[n];
         int i;
         for(i=0; i < NUM_SONAR; i++){
             // Construct Command 
             sprintf(cmd, "s%d", i);
 
             // Poll Arduino
-            int dataSize = pollArduino(sonarData, cmd);
+            int dataSize = pollArduino(sonarData, cmd, n);
 
             // Append to sendBuff
             strcat(sendBuff, sonarData);
@@ -217,27 +218,30 @@ int processMsg(char sendBuff[], const char* msg) {
     return status;
 }
 
-int pollArduino(char buffer[], const char msg[]){
+int pollArduino(char buffer[], const char msg[], const int buffSize){
     // Send msg to arduino
     int n = write(i2c_bus, msg, strlen(msg));
     if (n == -1){
         return -1;
     }
-
+    
     // Receive Message from arduino
-    if (read(i2c_bus, buffer, sizeof(buffer)) <0) {
-        /* ERROR HANDLING: i2c transaction failed */
-        printf("Failed to read from the i2c bus.\n");
-        printf(buffer);
-        printf("\n\n");
-        return -1;
-    } else {
-        // Clear chars after newline
-        //buffer[strcspn(buffer, "\n")] = 0;
-
-        // Type case as unsigned long
-        printf("Msg: %s\n", buffer);
+    int i = 0; char new;
+    while(i < buffSize){
+      // Read in next char
+      if((read(i2c_bus, &new, 1)) == 1){
+        // Check for end of message
+        if(new == '\n') break;
+        
+        // Add new to buffer
+        buffer[i] = new;
+        i++;
+      
+      }
     }
+    
+    // Print Buffer
+    printf("%s \n", buffer);
 
     // Return size of buffer
     return strlen(buffer);
