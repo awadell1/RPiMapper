@@ -7,6 +7,8 @@
 //Comment out to disable serial debugging
 #define debugOn
 
+#define BUFFER_LENGTH 64
+
 // Sonar ISR
 #include "sonarInterupt.h"
 void SetupSonar(void);
@@ -14,6 +16,8 @@ void SetupSonar(void);
 
 // I2C Response Buffer
 char i2c_buff[32] = {0};
+int i2c_buffer_ready = 0;
+int i2c_buffer_len = 0;
 
 int main(void){
 	//Start Serial Communication if Debugging Mode is activated
@@ -78,7 +82,16 @@ void SetupI2C(void){
 }
 
 void I2C_Request(){
-	Wire.write(i2c_buff);
+	if(i2c_buffer_ready >= 0 && i2c_buffer_ready < i2c_buffer_len){
+		// Write next char
+		Wire.write(i2c_buff[i2c_buffer_ready]);
+		Serial.print(i2c_buff[i2c_buffer_ready]);
+		Serial.print("\n");
+		i2c_buffer_ready++;
+	} else if (i2c_buffer_ready >= i2c_buffer_len){
+		// Reset Counter
+		i2c_buffer_ready = -1;
+	}
 	return;
 }
 
@@ -93,6 +106,7 @@ void I2C_Receive(int numBytes){
 	}
 
 	// Parse Request
+	i2c_buffer_ready = -1; // Mark Arduino as busy
 	if(buff[0] == 's' && numBytes >= 2){
 		// Read sonar id
 		int sonar;
@@ -108,5 +122,8 @@ void I2C_Receive(int numBytes){
 		// Write back error
 		sprintf(i2c_buff, "ERROR\n", SonarReading[0]);
 	}
+	i2c_buffer_ready = 0; // Mark Arduino as ready
+	i2c_buffer_len = strlen(i2c_buff);
+
 	return;
 }
