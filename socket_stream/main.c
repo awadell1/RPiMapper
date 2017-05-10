@@ -226,20 +226,9 @@ int pollArduino(char buffer[], const char msg[], const int buffSize){
     }
     
     // Receive Message from arduino
-    int i = 0; char new;
-    while(i < buffSize){
-      // Read in next char
-      if((read(i2c_bus, &new, 1)) == 1){
-        // Check for end of message
-        if(new == '\n') break;
-        
-        // Add new to buffer
-        buffer[i] = new;
-        i++;
-      
-      }
-    }
-    
+    read(i2c_bus, buffer, buffSize);
+    strtok(buffer, "\n");
+  
     // Print Buffer
     printf("%s \n", buffer);
 
