@@ -14,6 +14,11 @@
 #include <fcntl.h>
 #include <signal.h>
 
+// Libaries for IMU
+//#include <time.h>
+//#include "LSM9DS1_Types.h"
+//#include "LSM9DS1.h"
+
 // Set the Wheel Speeds
 #define SET_WHEEL_SPEED "SWV"
 
@@ -38,16 +43,17 @@
 // Set the number of sonars
 #define NUM_SONAR 8
 
-// Set the I2C Addresses
+// Set I2C Address
 #define ARDUINO_I2C 0x05
-#define MAGNO_I2C 0x1E
-#define Gyro_I2c 0x6B
+#define MAGNO_I2C 0x6B
+#define GYRO_I2C 0x1E
 
 // Global variables
 int i2c_bus = 0;        // File handle for i2c bus
 int sockfd = 0;         // File handle for server socket
 int clientfd = 0;       // File handle for client socket
- 
+//LSM9DS1 imu(IMU_MODE_I2C, MAGNO_I2C, GYRO_I2C); // I2C Connection to IMU
+
 // Declare Functions
 void sighandler(int signum);
 
