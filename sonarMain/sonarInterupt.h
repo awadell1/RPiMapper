@@ -11,10 +11,7 @@
 #define nSonar 8
 
 //Define Sonar Pins
-#define SonarTrig (1 << PC0)
-#define Sonar1 (1 << PC1)
-#define Sonar2 (1 << PC2)
-#define Sonar3 (1 << PC3)
+#define SonarTrig (1 << PD4)
 
 //Define the Error Value used to indicate invalid readings
 #define SonarError 65355
@@ -33,68 +30,141 @@
 volatile unsigned long SonarReading[nSonar] = {0};
 	
 //Initialize volatile long array to store new Sonar Reading pre-verification
-volatile unsigned long SonarReadingNew[nSonar] = {0};
+volatile unsigned long SonarReadingNew = {0};
 
 //Initialize volatile long array to store start times for Sonar Readings
-volatile unsigned long SonarReadingStart[nSonar] = {0};
+volatile unsigned long SonarReadingStart = {0};
 
-//Initialize register to store prior states of PORT C
+//Initialize register to store prior states of PORT
 volatile unsigned short SonarPinsLast = 0;
+
+///////////////////////////////////////////////////////////////////////////////
+// Define Sonars
+const char sonarPort[nSonar] = {'D', 'B', 'B', 'B', 'B', 'B', 'C', 'C'};
+const short sonarPin[nSonar] = {(1<<7), (1<<0), (1<<1), (1<<2), (1<<3), (1<<4), (1<<2), (1<<3)};
+
+
+// Current Sonar
+int curSonar = -1;
+
+
 
 //Interrupt to handle cleanup of sonar reading and initialize the next reading
 ISR(TIMER1_COMPA_vect){
-	//Disable interrupts for Sonar Pins
-	PCMSK1 &= ~(Sonar1 | Sonar2 | Sonar3);
+	// Move to the next sonar
+	int priorSonar = curSonar;
+	curSonar = (curSonar+1) % nSonar;
+
+	// Disable Interupts for Prior Sonar
+	if (sonarPort[priorSonar] == 'B'){
+		PCMSK0 &= ~sonarPin[priorSonar];
+	} else if (sonarPort[priorSonar] == 'C'){
+		PCMSK1 &= ~sonarPin[priorSonar];
+	} else if (sonarPort[priorSonar] == 'D'){
+		PCMSK2 &= ~sonarPin[priorSonar];
+	}
 
 	//Toggle LED to indicate start of cycle
 	PORTB ^= (1<<PB5);
-	
-	//Clean up Sonar Readings
-	for(int SonarIndex = 0; SonarIndex < nSonar; SonarIndex++){
 		
-		//If Sonar Measurement > MaxDistance Or Zero -> Bad Reading
-		if((SonarReadingNew[SonarIndex] >= MaxDistance) || (SonarReadingNew[SonarIndex] == 0)){
-			SonarReadingNew[SonarIndex] = SonarError;
-		}
-			
-		//Transfer verified reading to SonarReading
-		SonarReading[SonarIndex] = SonarReadingNew[SonarIndex];
+	//If Sonar Measurement > MaxDistance Or Zero -> Bad Reading
+	if((SonarReadingNew >= MaxDistance) || (SonarReadingNew == 0)){
+		SonarReadingNew = SonarError;
 	}
+
+	//Transfer verified reading to SonarReading
+	SonarReading[priorSonar] = SonarReadingNew;
+
+	char buf[32];
+	sprintf(buf, "%u \n", SonarReadingNew);
+	Serial.print(buf);
+
+	// Reset SonarReading New
+	SonarReadingNew = 0;
+
+
 	
 	//////////////////////////////////////////////////////////////////////////
 	//Trigger the Next Sonar Readings
 	//////////////////////////////////////////////////////////////////////////
-	
 	//Set Sonar Trigger Pins to Output
-	DDRC |= SonarTrig;
+	DDRD |= SonarTrig;
 	
 	//Set Sonar Pins low to force clean pulse
-	PORTC &= ~SonarTrig;
+	PORTD &= ~SonarTrig;
 	
 	//Wait 2 uS
 	_delay_us(2);
 
 	//Set Sonar Pins High to start Pulse
-	PORTC |= SonarTrig;
+	PORTD |= SonarTrig;
 	
 	//Wait 5 uS per Sonar Datasheet
 	_delay_us(5);
 	
 	//Set Sonar Pins Low to end pulse
-	PORTC &= ~SonarTrig;
+	PORTD &= ~SonarTrig;
+
+	sprintf(buf, "Firing Sonar %d: ", curSonar);
+	Serial.print(buf);
+
+	//////////////////////////////////////////////////////////////////////////
 	
 	//Set Sonar Pins to Input
-	DDRC &= ~(Sonar1 | Sonar2 | Sonar3);
+	if (sonarPort[curSonar] == 'B'){
+		DDRB &= ~sonarPin[curSonar];
+	} else if (sonarPort[curSonar] == 'C'){
+		DDRC &= ~sonarPin[curSonar];
+	} else if (sonarPort[curSonar] == 'D'){
+		DDRD &= ~sonarPin[curSonar];
+	}
 	
 	//Set Timer 1 to Zero
 	TCNT1 = 0;
 	
 	//Enable Pin Change Interrupts for Sonar Pins
-	PCMSK1 |= Sonar1 | Sonar2 | Sonar3;
+	if (sonarPort[curSonar] == 'B'){
+		PCMSK0 |= sonarPin[curSonar];
+	} else if (sonarPort[curSonar] == 'C'){
+		PCMSK1 |= sonarPin[curSonar];
+	} else if (sonarPort[curSonar] == 'D'){
+		PCMSK2 |= sonarPin[curSonar];
+	}
 }
 
 //ISR To Handle Detecting and Recording the Response Pulse from the Sonar Sensors
-ISR(PCINT1_vect){
+ISR(PCINT0_vect){
+	//Read Port C
+	uint8_t PinsCurrent = PINB;
+	
+	//////////////////////////////////////////////////////////////////////////
+	//Detect Rising Edges
+	//////////////////////////////////////////////////////////////////////////
+	
+	//Rising Edge if Pin is Currently High and used to be Low
+	uint8_t PinRisingEdge = ~SonarPinsLast & PinsCurrent;
+	if(PinRisingEdge & sonarPin[curSonar]){
+		//Start of Pulse on Sonar Pin Received -> Record in SonarReadingStart Array
+		SonarReadingStart = TCNT1;
+	}
+	
+	//////////////////////////////////////////////////////////////////////////
+	//Detect Falling Edges
+	//////////////////////////////////////////////////////////////////////////
+	
+	//Failing Edge if Pin is Currently Low and Used to be High
+	uint8_t PinFallingEde = ~PinsCurrent & SonarPinsLast;
+	if(PinFallingEde & sonarPin[curSonar]){
+		//End of Pulse on Sonar Pin Received -> Compute Elapsed Time
+		SonarReadingNew = TCNT1 - SonarReadingStart;
+	}
+	
+	//////////////////////////////////////////////////////////////////////////
+	
+	//Update SonarPinsLast to Current Pin State
+	SonarPinsLast = PinsCurrent;
+}
+ISR(PCIE1_vect){
 	//Read Port C
 	uint8_t PinsCurrent = PINC;
 	
@@ -104,23 +174,9 @@ ISR(PCINT1_vect){
 	
 	//Rising Edge if Pin is Currently High and used to be Low
 	uint8_t PinRisingEdge = ~SonarPinsLast & PinsCurrent;
-	
-	//Check for Rising Edge on the Sonar1 Pin
-	if(PinRisingEdge & Sonar1){
-		//Start of Pulse on Sonar1 Received -> Record in SonarReadingStart Array
-		SonarReadingStart[0] = TCNT1;
-	}
-	
-	//Check for Rising Edge on the Sonar2 Pin
-	if(PinRisingEdge & Sonar2){
-		//Start of Pulse on Sonar2 Received -> Record in SonarReadingStart Array
-		SonarReadingStart[1] = TCNT1;
-	}
-	
-	//Check for Rising Edge on the Sonar3 Pin
-	if(PinRisingEdge & Sonar3){
-		//Start of Pulse on Sonar3 Received -> Record in SonarReadingStart Array
-		SonarReadingStart[2] = TCNT1;
+	if(PinRisingEdge & sonarPin[curSonar]){
+		//Start of Pulse on Sonar Pin Received -> Record in SonarReadingStart Array
+		SonarReadingStart = TCNT1;
 	}
 	
 	//////////////////////////////////////////////////////////////////////////
@@ -129,29 +185,45 @@ ISR(PCINT1_vect){
 	
 	//Failing Edge if Pin is Currently Low and Used to be High
 	uint8_t PinFallingEde = ~PinsCurrent & SonarPinsLast;
-	
-	//Check for the Falling edge on the Sonar 1 Pin
-	if(PinFallingEde & Sonar1){
-		//End of Pulse on Sonar1 Received -> Compute Elapsed Time
-		SonarReadingNew[0] = TCNT1 - SonarReadingStart[0];
+	if(PinFallingEde & sonarPin[curSonar]){
+		//End of Pulse on Sonar Pin Received -> Compute Elapsed Time
+		SonarReadingNew = TCNT1 - SonarReadingStart;
 	}
-	
-	//Check for the Falling edge on the Sonar 2 Pin
-	if(PinFallingEde & Sonar2){
-		//End of Pulse on Sonar 2 Received -> Compute Elapsed Time
-		SonarReadingNew[1] = TCNT1 - SonarReadingStart[1];
-	}
-	
-	//Check for the Falling edge on the Sonar 3 Pin
-	if(PinFallingEde & Sonar3){
-		//End of Pulse on Sonar 3 Received -> Compute Elapsed Time
-		SonarReadingNew[2] = TCNT1 - SonarReadingStart[2];
-	}	
 	
 	//////////////////////////////////////////////////////////////////////////
 	
 	//Update SonarPinsLast to Current Pin State
 	SonarPinsLast = PinsCurrent;
+}
+ISR(PCIE2_vect){
+	//Read Port D
+	uint8_t PinsCurrent = PIND;
 	
+	//////////////////////////////////////////////////////////////////////////
+	//Detect Rising Edges
+	//////////////////////////////////////////////////////////////////////////
+	
+	//Rising Edge if Pin is Currently High and used to be Low
+	uint8_t PinRisingEdge = ~SonarPinsLast & PinsCurrent;
+	if(PinRisingEdge & sonarPin[curSonar]){
+		//Start of Pulse on Sonar Pin Received -> Record in SonarReadingStart Array
+		SonarReadingStart = TCNT1;
+	}
+	
+	//////////////////////////////////////////////////////////////////////////
+	//Detect Falling Edges
+	//////////////////////////////////////////////////////////////////////////
+	
+	//Failing Edge if Pin is Currently Low and Used to be High
+	uint8_t PinFallingEde = ~PinsCurrent & SonarPinsLast;
+	if(PinFallingEde & sonarPin[curSonar]){
+		//End of Pulse on Sonar Pin Received -> Compute Elapsed Time
+		SonarReadingNew = TCNT1 - SonarReadingStart;
+	}
+	
+	//////////////////////////////////////////////////////////////////////////
+	
+	//Update SonarPinsLast to Current Pin State
+	SonarPinsLast = PinsCurrent;
 }
 #endif /* INCFILE1_H_ */
