@@ -7,6 +7,11 @@
 //Comment out to disable serial debugging
 #define debugOn
 
+// Define Buffer Sizes
+#define BUFFER_LENGTH 64
+
+
+
 // Sonar ISR
 #include "sonarInterupt.h"
 void SetupSonar(void);
@@ -14,6 +19,10 @@ void SetupSonar(void);
 
 // I2C Response Buffer
 char i2c_buff[32] = {0};
+int i2c_buffer_ready = 0;
+int i2c_buffer_len = 0;
+
+extern volatile unsigned long SonarReading[];
 
 int main(void){
 	//Start Serial Communication if Debugging Mode is activated
@@ -52,17 +61,14 @@ void SetupSonar(void){
 	//Set Timer 1 Pre-scaler to 64
 	TCCR1B |= (1  << CS11) | (1 << CS10);
 	
-	//Enables Pin Change interrupts for Port C
-	PCICR |= (1 << PCIE1);
+	//Enables Pin Change interrupts for Port B, C and D
+	PCICR |= (1 << PCIE0) | (1 << PCIE1) | (1 << PCIE0);
 
 	//Set OCR1A to 30 mS
 	OCR1A = 7500;
-	
+
 	//Set Timer 1 to Clear Timer on Compare 
 	TCCR1B |= (1 << WGM12);
-
-	//Set Sonar Pins to Input
-	DDRC &= ~(Sonar1 | Sonar2 | Sonar3);
 	
 	//Turn on Interrupts for OCR1A, OCR1B
 	TIMSK1 |= (1 << OCIE1A);
@@ -78,7 +84,14 @@ void SetupI2C(void){
 }
 
 void I2C_Request(){
-	Wire.write(i2c_buff);
+	if(i2c_buffer_ready >= 0 && i2c_buffer_ready < i2c_buffer_len){
+		// Write next char
+		Wire.write(i2c_buff[i2c_buffer_ready]);
+		i2c_buffer_ready++;
+	} else if (i2c_buffer_ready >= i2c_buffer_len){
+		// Reset Counter
+		i2c_buffer_ready = -1;
+	}
 	return;
 }
 
@@ -93,12 +106,15 @@ void I2C_Receive(int numBytes){
 	}
 
 	// Parse Request
+	i2c_buffer_ready = -1; // Mark Arduino as busy
 	if(buff[0] == 's' && numBytes >= 2){
 		// Read sonar id
-		int sonar = atoi(buff[0] +1);
+		int sonar;
+		sscanf(buff+1, "%d", &sonar);
 
 		// Write back sonar reading
-		sprintf(i2c_buff, "%u\n", SonarReading[0]);
+		memset(i2c_buff, 0, sizeof(i2c_buff));
+		sprintf(i2c_buff, "%u\n", SonarReading[sonar]);
 	} else if(buff[1] == 'A'){
 		// Write back message
 		sprintf(i2c_buff, "Hello World\n");
@@ -106,5 +122,8 @@ void I2C_Receive(int numBytes){
 		// Write back error
 		sprintf(i2c_buff, "ERROR\n", SonarReading[0]);
 	}
+	i2c_buffer_ready = 0; // Mark Arduino as ready
+	i2c_buffer_len = strlen(i2c_buff);
+
 	return;
 }
