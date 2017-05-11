@@ -75,10 +75,6 @@ ISR(TIMER1_COMPA_vect){
 	//Transfer verified reading to SonarReading
 	SonarReading[priorSonar] = SonarReadingNew;
 
-	char buf[32];
-	sprintf(buf, "%u \n", SonarReadingNew);
-	Serial.print(buf);
-
 	// Reset SonarReading New
 	SonarReadingNew = 0;
 
@@ -104,9 +100,6 @@ ISR(TIMER1_COMPA_vect){
 	
 	//Set Sonar Pins Low to end pulse
 	PORTD &= ~SonarTrig;
-
-	sprintf(buf, "Firing Sonar %d: ", curSonar);
-	Serial.print(buf);
 
 	//////////////////////////////////////////////////////////////////////////
 	

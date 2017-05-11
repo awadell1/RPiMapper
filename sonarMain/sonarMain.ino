@@ -10,7 +10,11 @@
 // Define Buffer Sizes
 #define BUFFER_LENGTH 64
 
-
+// Odometry Setup
+#include "odometryInterupt.h"
+void SetupOdometry(void);
+extern volatile unsigned long leftCount;
+extern volatile unsigned long rightCount;
 
 // Sonar ISR
 #include "sonarInterupt.h"
@@ -41,7 +45,8 @@ int main(void){
 	
 	SetupSonar();
 	SetupI2C();
-	
+	SetupOdometry();
+
 	//////////////////////////////////////////////////////////////////////////
 	
 	//Enable Interrupts
@@ -83,6 +88,12 @@ void SetupI2C(void){
 	Wire.onReceive(I2C_Receive);
 }
 
+void SetupOdometry(void){
+	// Enable Pin Change interrupts
+	EICRA |= (1<<ISC10) | (1<<ISC00);
+	EIMSK |= (1<<INT0) | (1<<INT1);
+}
+
 void I2C_Request(){
 	if(i2c_buffer_ready == 0){
 		// Write next char
@@ -113,7 +124,11 @@ void I2C_Receive(int numBytes){
 		// Write back sonar reading
 		memset(i2c_buff, 0, sizeof(i2c_buff));
 		sprintf(i2c_buff, "%u\n", SonarReading[sonar]);
-	} else if(buff[1] == 'A'){
+	} else if(buff[1] == 'O'){
+		// Write back odometry counts
+		memset(i2c_buff, 0, sizeof(i2c_buff));
+		sprintf(i2c_buff, "%u %u\n", leftCount, rightCount);
+	} else if(buff[1] == 'S'){
 		// Write back message
 		sprintf(i2c_buff, "Hello World\n");
 	} else {
