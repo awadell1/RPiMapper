@@ -62,7 +62,7 @@ void SetupSonar(void){
 	TCCR1B |= (1  << CS11) | (1 << CS10);
 	
 	//Enables Pin Change interrupts for Port B, C and D
-	PCICR |= (1 << PCIE0) | (1 << PCIE1) | (1 << PCIE0);
+	PCICR |= (1 << PCIE0) | (1 << PCIE1) |  (1 << PCIE2);
 
 	//Set OCR1A to 30 mS
 	OCR1A = 7500;
@@ -84,13 +84,11 @@ void SetupI2C(void){
 }
 
 void I2C_Request(){
-	if(i2c_buffer_ready >= 0 && i2c_buffer_ready < i2c_buffer_len){
+	if(i2c_buffer_ready == 0){
 		// Write next char
-		Wire.write(i2c_buff[i2c_buffer_ready]);
-		i2c_buffer_ready++;
-	} else if (i2c_buffer_ready >= i2c_buffer_len){
-		// Reset Counter
-		i2c_buffer_ready = -1;
+		Wire.write(i2c_buff);
+	} else {
+		Wire.write("Busy\n");
 	}
 	return;
 }
@@ -123,7 +121,5 @@ void I2C_Receive(int numBytes){
 		sprintf(i2c_buff, "ERROR\n", SonarReading[0]);
 	}
 	i2c_buffer_ready = 0; // Mark Arduino as ready
-	i2c_buffer_len = strlen(i2c_buff);
-
 	return;
 }

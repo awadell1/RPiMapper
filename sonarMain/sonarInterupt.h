@@ -41,7 +41,7 @@ volatile unsigned short SonarPinsLast = 0;
 ///////////////////////////////////////////////////////////////////////////////
 // Define Sonars
 const char sonarPort[nSonar] = {'D', 'B', 'B', 'B', 'B', 'B', 'C', 'C'};
-const short sonarPin[nSonar] = {(1<<7), (1<<0), (1<<1), (1<<2), (1<<3), (1<<4), (1<<2), (1<<3)};
+const short sonarPin[nSonar] = {(1<<7), (1<<0), (1<<1), (1<<2), (1<<3), (1<<4), (1<<PCINT8), (1<<PCINT9)};
 
 
 // Current Sonar
@@ -134,7 +134,7 @@ ISR(TIMER1_COMPA_vect){
 
 //ISR To Handle Detecting and Recording the Response Pulse from the Sonar Sensors
 ISR(PCINT0_vect){
-	//Read Port C
+	//Read Port B
 	uint8_t PinsCurrent = PINB;
 	
 	//////////////////////////////////////////////////////////////////////////
@@ -164,7 +164,7 @@ ISR(PCINT0_vect){
 	//Update SonarPinsLast to Current Pin State
 	SonarPinsLast = PinsCurrent;
 }
-ISR(PCIE1_vect){
+ISR(PCINT1_vect){
 	//Read Port C
 	uint8_t PinsCurrent = PINC;
 	
@@ -195,7 +195,7 @@ ISR(PCIE1_vect){
 	//Update SonarPinsLast to Current Pin State
 	SonarPinsLast = PinsCurrent;
 }
-ISR(PCIE2_vect){
+ISR(PCINT2_vect){
 	//Read Port D
 	uint8_t PinsCurrent = PIND;
 	
