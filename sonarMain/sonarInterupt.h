@@ -81,8 +81,6 @@ ISR(TIMER1_COMPA_vect){
 
 	// Reset SonarReading New
 	SonarReadingNew = 0;
-
-
 	
 	//////////////////////////////////////////////////////////////////////////
 	//Trigger the Next Sonar Readings

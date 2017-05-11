@@ -38,8 +38,10 @@
 // Set the number of sonars
 #define NUM_SONAR 8
 
-// Set the Arduino Address
+// Set the I2C Addresses
 #define ARDUINO_I2C 0x05
+#define MAGNO_I2C 0x1E
+#define Gyro_I2c 0x6B
 
 // Global variables
 int i2c_bus = 0;        // File handle for i2c bus
@@ -219,6 +221,13 @@ int processMsg(char sendBuff[], const char* msg) {
 }
 
 int pollArduino(char buffer[], const char msg[], const int buffSize){
+    // Attempt to connect to Arduino
+    if (ioctl(i2c_bus,I2C_SLAVE, ARDUINO_I2C) < 0) {
+        printf("Failed to acquire bus access and/or talk to Arduino.\n");
+        /* ERROR HANDLING; you can check errno to see what went wrong */
+        return -1;
+    }
+
     // Send msg to arduino
     int n = write(i2c_bus, msg, strlen(msg));
     if (n == -1){
@@ -236,6 +245,17 @@ int pollArduino(char buffer[], const char msg[], const int buffSize){
     return strlen(buffer);
 }
 
+int pollIMU(char buffer[], const int buffSize){
+    // Attempt to connect to Magnometer
+    if (ioctl(i2c_bus,I2C_SLAVE, MAGNO_I2C) < 0) {
+        printf("Failed to acquire bus access and/or talk to slave.\n");
+        /* ERROR HANDLING; you can check errno to see what went wrong */
+        return -1;
+    }
+
+    //
+}
+
 int openI2C(){
     // Open Connection to bus
     if ((i2c_bus = open("/dev/i2c-1", O_RDWR)) < 0) {
@@ -243,13 +263,6 @@ int openI2C(){
         /* ERROR HANDLING; you can check errno to see what went wrong */
         return -1;
     close(i2c_bus);
-    }
-
-    // Attempt to talk to Slave
-    if (ioctl(i2c_bus,I2C_SLAVE, ARDUINO_I2C) < 0) {
-        printf("Failed to acquire bus access and/or talk to slave.\n");
-        /* ERROR HANDLING; you can check errno to see what went wrong */
-        return -1;
     }
 
     // Success
