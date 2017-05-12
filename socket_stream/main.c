@@ -40,6 +40,7 @@
 
 // Set the Arduino Address
 #define ARDUINO_I2C 0x05
+#define I2C_BUFF_SIZE 32
 
 // Global variables
 int i2c_bus = 0;        // File handle for i2c bus
@@ -169,11 +170,31 @@ int processMsg(char sendBuff[], const char* msg) {
     int status;
 
     if (strncmp(msg, SET_WHEEL_SPEED, 3) == 0) {
-        strncpy(resp, "25,26", 5);
+        // Set the wheel speeds
+        char motorState[I2C_BUFF_SIZE];
+        
+        // Create Message for Arduino
+        char cmd[I2C_BUFF_SIZE];
+        sprintf(cmd, "W%s", msg+3);
+      
+        // Send Command to Arduino
+        pollArduino(motorState, cmd, I2C_BUFF_SIZE);
+        
+        // ACK Motor Command
+        strcat(sendBuff, motorState);
+        strcat(sendBuff, " ");
         status = 1;
     } else if (strncmp(msg, GET_ODOMETRY, 3) == 0) {
-        strncpy(resp, "Goodbye", 7);
-        status = -1;
+        // Request Odmetry Readings from Arduino
+        char odometryData[I2C_BUFF_SIZE];
+        int dataSize = pollArduino(odometryData, "O", I2C_BUFF_SIZE);
+        
+        // Check Read was successful
+        if(dataSize > 0){
+            strcat(sendBuff, odometryData);
+            strcat(sendBuff, " ");
+            return 1;
+        } else return -1;
     } else if (strncmp(msg, GET_RANGE_READING, 3) == 0) {
         // Request Sonar Readings from Arduino
         int n = 16;
@@ -219,6 +240,10 @@ int processMsg(char sendBuff[], const char* msg) {
 }
 
 int pollArduino(char buffer[], const char msg[], const int buffSize){
+    char buf[128];
+    sprintf(buf, "\tSending to Arduino: %s \n", msg);
+    printf(buf);
+
     // Send msg to arduino
     int n = write(i2c_bus, msg, strlen(msg));
     if (n == -1){
@@ -229,8 +254,9 @@ int pollArduino(char buffer[], const char msg[], const int buffSize){
     read(i2c_bus, buffer, buffSize);
     strtok(buffer, "\n");
   
-    // Print Buffer
-    printf("%s \n", buffer);
+    // Print Response
+    sprintf(buf, "\tRecieved from Arduino: %s \n", buffer);
+    printf(buf);
 
     // Return size of buffer
     return strlen(buffer);
