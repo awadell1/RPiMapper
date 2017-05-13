@@ -20,9 +20,17 @@ extern volatile unsigned long rightCount;
 #include "sonarInterupt.h"
 void SetupSonar(void);
 
+// Motor
+#include "motor.h"
+
+// Define Motor States
+volatile int timerState = 0;
+// timerState 0 -> Generate Control Pulse
+// timerState 1 -> Hold off for 20ms
+#include "motorInterrupt.h"
 
 // I2C Response Buffer
-char i2c_buff[32] = {0};
+char i2c_buff[32];
 int i2c_buffer_ready = 0;
 int i2c_buffer_len = 0;
 
