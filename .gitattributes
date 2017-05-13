@@ -1,0 +1,4 @@
+# LF EOL for all code files
+*.m text eol=lf diff=matlab
+*.c text eol=lf diff=cpp
+*.py text eol=lf diff=python
