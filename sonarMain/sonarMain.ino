@@ -124,7 +124,7 @@ void I2C_Receive(int numBytes){
 		// Write back sonar reading
 		memset(i2c_buff, 0, sizeof(i2c_buff));
 		sprintf(i2c_buff, "%u\n", SonarReading[sonar]);
-	} else if(buff[1] == 'O'){
+	} else if(buff[1] == 'o'){
 		// Write back odometry counts
 		memset(i2c_buff, 0, sizeof(i2c_buff));
 		sprintf(i2c_buff, "%u %u\n", leftCount, rightCount);
