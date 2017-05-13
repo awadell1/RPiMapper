@@ -14,20 +14,16 @@
 #include <fcntl.h>
 #include <signal.h>
 
-// Set the Wheel Speeds
-#define SET_WHEEL_SPEED "SWV"
 
-// Get Odometry Measurement
-#define GET_ODOMETRY "GOM"
 
-// Get Range Measurement
-#define GET_RANGE_READING "GRM"
-
-// Get IMU Measurement
-#define GET_IMU_READING "GIR"
-
-// Close Connection
-#define SHUTDOWN_COMMS "SDC"
+///////////////////////////////////////////////////////////////////////
+// Command Tags
+#define SET_WHEEL_SPEED "SWV"		// Set the Wheel Speeds
+#define GET_ODOMETRY "GOM"			// Get Odometry Measurement
+#define GET_RANGE_READING "GRM"		// Get Range Measurement
+#define GET_IMU_READING "GIR"		// Get IMU Measurement
+#define SHUTDOWN_COMMS "SDC"		// Close Connection
+///////////////////////////////////////////////////////////////////////
 
 // Define Port to listen on
 #define RPI_PORT 1618
@@ -67,7 +63,9 @@ int pollArduino(char buffer[], const char msg[], const int buffSize);
 
 int openI2C();
 
-void str2double(double* num, const char str[], const int nNum)
+void str2double(double* num, const char str[], const int nNum);
+
+int openSocket();
 
 void error(const char *msg)
 {
@@ -140,7 +138,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-int openSocket(NULL){
+int openSocket(){
 	// Create variables to store connection information
 	int portno;         // portno:      The port the server listens on
 	socklen_t clilen;   // clilen:      The length of the client address
