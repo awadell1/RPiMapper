@@ -40,14 +40,15 @@
 #define MM_TO_M 0.001
 
 // Define Wheel Parameters
-#define WHEEL_DIAMETER_MM 120
+#define WHEEL_SPEED_FACTOR 10
+#define WHEEL_DIAMETER 0.012
 #define WHEEL_NSPOKE 12
-#define WHEEl_2_CENTER_MM 400
-#define ENCODER_MM_PER_PULSE ((WHEEL_DIAMETER_MM/WHEEL_NSPOKE) * PI)
+#define WHEEl_2_CENTER 0.040
+#define ENCODER_PER_PULSE ((WHEEL_DIAMETER/WHEEL_NSPOKE) * PI)
 
 // Sonar Measurements calculations
 #define NUM_SONAR 8
-#define SONAR_TOF_MM 13.61
+#define SONAR_TOF 0.01361
 
 // Global variables
 int i2c_bus = 0;        // File handle for i2c bus
@@ -195,10 +196,23 @@ int processMsg(char sendBuff[], const char* msg) {
 	if (strncmp(msg, SET_WHEEL_SPEED, 3) == 0) {
 		// Set the wheel speeds
 		char motorState[I2C_MSG_SIZE];
-		
+	        
+                // Convert To Motor Commands
+                double speed [2];
+                str2double(speed, msg+3, 2);
+
+                // Convert to speed comands
+                double speedCmd[2] = {0};
+                for(int i = 0; i < 2; i++){
+                    speedCmd[i] = WHEEL_SPEED_FACTOR * speed[i] / (WHEEL_DIAMETER * PI); 
+                    
+                    // Check for Max Speed
+                    if (speedCmd[i] > 99) speedCmd[i] = 99;
+                }
+
 		// Create Message for Arduino
 		char cmd[I2C_MSG_SIZE];
-		sprintf(cmd, "W%s", msg+3);
+		sprintf(cmd, "W %.f %.f", speedCmd[0], speedCmd[1]);
 	  
 		// Send Command to Arduino
 		pollArduino(motorState, cmd, I2C_MSG_SIZE);
@@ -222,8 +236,8 @@ int processMsg(char sendBuff[], const char* msg) {
 
 		// Convert Clicks to Fwd Distance and Angular Rotation
 		double FwdDist, AngTurn;
-		FwdDist = MM_TO_M * ENCODER_MM_PER_PULSE * (wheelTravel[0] + wheelTravel[1])/2;
-		AngTurn = MM_TO_M * ENCODER_MM_PER_PULSE * (wheelTravel[0] - wheelTravel[1])/ WHEEl_2_CENTER_MM;
+		FwdDist = ENCODER_PER_PULSE * (wheelTravel[0] + wheelTravel[1])/2;
+		AngTurn = ENCODER_PER_PULSE * (wheelTravel[0] - wheelTravel[1])/ WHEEl_2_CENTER;
 
 		// Report Odometry to Computer
 		sprintf(sendBuff + strlen(sendBuff), "%.f %.f ", FwdDist, AngTurn);
@@ -235,7 +249,7 @@ int processMsg(char sendBuff[], const char* msg) {
 		char sonarData[I2C_MSG_SIZE];
 		char cmd[I2C_MSG_SIZE];
 		double sonar = 0;
-                for(int i=0; i < NUM_SONAR; i++){
+                for(int i = 0; i < NUM_SONAR; i++){
 			// Construct Command to get Sonar Reading
 			sprintf(cmd, "s%d", i);
 
@@ -243,7 +257,7 @@ int processMsg(char sendBuff[], const char* msg) {
 			int dataSize = pollArduino(sonarData, cmd, I2C_MSG_SIZE);
 
 			// Compute Sonar Measurement
-                        sonar = strtod(sonarData, NULL)* SONAR_TOF_MM * MM_TO_M;
+                        sonar = strtod(sonarData, NULL)* SONAR_TOF;
 
 			// Append to sendBuff
 			sprintf(sendBuff + strlen(sendBuff), "%.f ", sonar);
