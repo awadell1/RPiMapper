@@ -51,12 +51,15 @@ classdef Robot < handle
 	properties(SetAccess=immutable)
 		% Ports Used to communicate with the Create
 		robotPort = [];    % Port used to communicate with the Roomba
+		tagNum = [];
 	end
 	
 	% Properties for replaying previously logged data
 	properties(SetAccess = private)
 		debugData = [];	% Stores a previously logged dataStore
 		debugIndex = 1;	% Current row in debugData from which to read
+		
+		debugMode = false;
 	end
 
 	properties	
@@ -176,13 +179,11 @@ classdef Robot < handle
 			obj.robotPort.write(uint8(packet));
 			
 			% Read Response
-			msg = obj.robotPort.read(1026, 'uint8');
-			
-			% Drop Trailing Zeros
-			msg(1+find(msg, 1, 'last'):end) = [];
-			
+			msg = char(obj.robotPort.read(1026, 'uint8'));
+						
 			% Extract Response and Time Stamp
-			response = char(msg);
+			[time, ~,~,nI] = sscanf(msg, '%f', 1);
+			response = msg(nI:end);
 		end
 		
 		%% Define External Functions

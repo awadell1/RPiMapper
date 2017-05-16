@@ -73,6 +73,7 @@ int main(void){
 	SetupI2C();
 	SetupOdometry();
 	setupMotor();
+	setMotorSpeed(0,0);
 
 	#ifdef debugOn
 		Serial.print("Setup Functions Complete\n");
