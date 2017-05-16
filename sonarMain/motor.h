@@ -12,14 +12,14 @@
 // Right Motor	OCR0A	PD6		D6
 
 // PWM Compare Levels
-#define PWM_15 150
-#define PWM_DS 0.2
+#define PWM_15 96
+#define PWM_DS 0.13
 
 // Motor Direction 
 #define LEFT_DIR 1
 #define RIGHT_DIR 1
 
-void setupMotor(void);
+void setupMotor();
 void setMotorSpeed(int left, int Right);
 
 #endif

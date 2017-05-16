@@ -16,9 +16,11 @@ volatile unsigned long rightCount = 0;
 ISR(INT0_vect){
 	leftCount++;
 
-	char buff[32];
-	sprintf(buff, "Left Count: %u\n", leftCount);
-	Serial.print(buff);
+	#ifdef DEBUG_ODOMETRY
+		char buff[32];
+		sprintf(buff, "Left Count: %u\n", leftCount);
+		Serial.print(buff);
+	#endif
 
 	_delay_us(HOLD_OFF);
 }
@@ -26,9 +28,11 @@ ISR(INT0_vect){
 ISR(INT1_vect){
 	rightCount++;
 
-	char buff[32];
-	sprintf(buff, "Right Count: %u\n", rightCount);
-	Serial.print(buff);
+	#ifdef DEBUG_ODOMETRY
+		char buff[32];
+		sprintf(buff, "Right Count: %u\n", rightCount);
+		Serial.print(buff);
+	#endif
 
 	_delay_us(HOLD_OFF);
 }

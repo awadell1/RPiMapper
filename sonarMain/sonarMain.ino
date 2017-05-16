@@ -6,6 +6,11 @@
 
 //Comment out to disable serial debugging
 #define debugOn
+#ifdef debugOn
+	//#define DEBUG_ODOMETRY // Enable Odometry Debugging
+	//#define DEBUG_MOTOR
+	//#define DEBUG_MOTOR_TIMING
+#endif
 
 // Define Buffer Sizes
 #define BUFFER_LENGTH 64
@@ -22,9 +27,9 @@ void SetupSonar(void);
 
 // Motor
 #include "motor.h"
+#include "motorInterrupt.h"
 
 // Define Motor States
-volatile int timerState = 0;
 // timerState 0 -> Generate Control Pulse
 // timerState 1 -> Hold off for 20ms
 #include "motorInterrupt.h"
@@ -51,9 +56,17 @@ int main(void){
 	/////						Run Set Up Functions					//////
 	//////////////////////////////////////////////////////////////////////////
 	
+	#ifdef debugOn
+		Serial.print("Running Setup Functions\n");
+	#endif
 	SetupSonar();
 	SetupI2C();
 	SetupOdometry();
+	setupMotor();
+
+	#ifdef debugOn
+		Serial.print("Setup Functions Complete\n");
+	#endif
 
 	//////////////////////////////////////////////////////////////////////////
 	
@@ -65,6 +78,12 @@ int main(void){
     {
 		//Required Delay for Sonar Loop, Do Not Remove or Reduce
 		_delay_ms(30);
+
+		// Update Motor Speeds
+		for(int i = -100; i < 100; i++){
+			setMotorSpeed(i, i);
+			_delay_ms(100);
+		}
     }
 }
 
@@ -145,4 +164,49 @@ void I2C_Receive(int numBytes){
 	}
 	i2c_buffer_ready = 0; // Mark Arduino as ready
 	return;
+}
+
+void setMotorSpeed(int left, int right){
+	// Update Motor Speeds
+	// 100 -> Full Speed Forward
+	// -100 -> Full Speed Reverse
+
+	OCR0B = PWM_15 + LEFT_DIR * left * PWM_DS;
+	OCR0A = PWM_15 + RIGHT_DIR * right * PWM_DS;
+
+	#ifdef DEBUG_MOTOR
+		// Report Motor Speeds
+		char buff[64];
+		sprintf(buff, "Left Motor Speed: %d Timer %d\nRight Motor Speed: %d Timer %d\n",
+			left, OCR0B, right, OCR0A);
+		Serial.print(buff);
+
+		// Report Timer Value
+		sprintf(buff, "TCNT0 Value: %d Pre-scaler: %d \n", TCNT0, TCCR0B);
+		Serial.print(buff);
+
+	#endif
+}
+
+void setupMotor(void){
+	// Set Up Timer
+
+	// Set Waveform Generation Mode to Normal
+	TCCR0A &= ~((1<<WGM02) | (1<<WGM01) | (1<<WGM00));
+
+	// Clear timer
+	TCNT0 = 0;
+
+	//Set Motor Pins as Outputs
+	DDRD |= (1<<PD5) | (1<<PD6);
+
+	// Enable Overflow interrupt
+	TIMSK0 |= (1<<TOIE0) | (1<<OCF0A) | (1<<OCF0B);
+
+	#ifdef DEBUG_MOTOR
+		Serial.print("Motor Setup\n");
+	#endif
+
+	// Enable Timer
+	TCCR0B |= (1<<CS00);
 }
