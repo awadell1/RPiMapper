@@ -36,11 +36,23 @@ extern volatile unsigned int rightSpeed;
 
 // Odometry Setup
 void SetupOdometry(void);
-volatile unsigned long rightCount = 0;
-ISR(INT1_vect){rightCount++;}
+volatile long rightCount = 0;
+ISR(INT1_vect){
+	if (rightSpeed < 93){
+		rightCount++;
+	} else {
+		rightCount--;
+	}
+}
 
-volatile unsigned long leftCount = 0;
-ISR(INT0_vect){leftCount++;}
+volatile long leftCount = 0;
+ISR(INT0_vect){
+	if (leftSpeed > 93){
+		leftCount++;
+	} else {
+		leftCount--;
+	}
+}
 
 // I2C Response Buffer
 char i2c_buff[32];
@@ -95,7 +107,7 @@ int main(void){
 		PORTB ^= (1<<PB5);
 
 		char buff[32];
-		sprintf(buff, "Left: %u Right: %u\n", leftCount, rightCount);
+		sprintf(buff, "Left: %ld Right: %ld\n", leftCount, rightCount);
 		Serial.print(buff);
 
 		//Required Delay for Sonar Loop, Do Not Remove or Reduce
@@ -184,13 +196,16 @@ void I2C_Receive(int numBytes){
 
 	} else if(buff[0] == 'O'){
 		// Write back odometry counts
-		sprintf(i2c_buff, "%u %u\n", leftCount, rightCount);
+		sprintf(i2c_buff, "%ld %ld\n", leftCount, rightCount);
 
 		#ifdef DEBUG_ODOMETRY
 			char buff[32];
-			sprintf(buff, "Left: %u Right: %u\n", leftCount, rightCount);
+			sprintf(buff, "Left: %ld Right: %ld\n", leftCount, rightCount);
 			Serial.print(buff);
 		#endif
+
+		// Reset Counts
+		leftCount = 0; rightCount = 0;
 
 	} else if(buff[0] == 'S'){
 		// Write back message
