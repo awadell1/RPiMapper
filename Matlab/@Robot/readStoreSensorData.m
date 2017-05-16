@@ -19,9 +19,6 @@ function [dataStore, noRobotCount] = readStoreSensorData(robot, noRobotCount, da
 %   MAE 5180: Autonomous Mobile Robots
 
 %Extract Ports from robot object
-CreatePort = robot.createPort;
-SonarPort = robot.sonarPort;
-BeaconPort = robot.beaconPort;
 tagNum = robot.tagNum;
 
 % Set Beacon Mode
@@ -38,20 +35,20 @@ end
 % Check if the Robot is in debugMode
 if ~robot.debugMode
 	%% read truth pose (from overhead localization system)
-	try
-		[px, py, pt] = OverheadLocalizationCreate(tagNum);
-		if (px == 0 && py == 0 && pt == 0 && ~isa(tagNum,'CreateRobot'))
-			disp('Overhead localization lost the robot!')
-			noRobotCount = noRobotCount + 1;
-		else
-			poseX = px; poseY = py; poseTheta = pt;
-			dataStore.truthPose = [dataStore.truthPose ; ...
-				toc poseX poseY poseTheta];
-			noRobotCount = 0;
-		end
-	catch
-		disp('Error retrieving or saving overhead localization data.');
-	end
+% 	try
+% 		[px, py, pt] = OverheadLocalizationCreate(tagNum);
+% 		if (px == 0 && py == 0 && pt == 0 && ~isa(tagNum,'CreateRobot'))
+% 			disp('Overhead localization lost the robot!')
+% 			noRobotCount = noRobotCount + 1;
+% 		else
+% 			poseX = px; poseY = py; poseTheta = pt;
+% 			dataStore.truthPose = [dataStore.truthPose ; ...
+% 				toc poseX poseY poseTheta];
+% 			noRobotCount = 0;
+% 		end
+% 	catch
+% 		disp('Error retrieving or saving overhead localization data.');
+% 	end
 
 	cmd = {'GOM', 'GRM', 'GIM'};
 	name = {'odometry', 'range', 'IMU'};
@@ -67,7 +64,7 @@ if ~robot.debugMode
 			dataStore.(name{i}) = [dataStore.(name{i}) ; ...
 				time data'];
 		catch
-			disp('Error retrieving or saving odometry data.');
+			fprintf('Error retrieving or saving %s data.\n', name{i});
 		end
 	end
 else

@@ -26,7 +26,17 @@ classdef Robot < handle
 		sonar_range = 3;						% Max Linear range of all sonar sensors [m]
 		sonar_radius = 0.14;					% Mounting Radius of the sonar sensor [m]
 		sonar_min_range= 0.02;					% Minimum linear range of sonar sensor [m]
-		sonar_angle = [-pi/2, 0 , pi/2];		%Angular position of the sonar sensors
+
+		% Angular position of the sonar sensors
+		sonar_angle = [...
+					pi,...
+					-0.75*pi,...
+					-0.5*pi,...
+					-0.25*pi,...
+					0,...
+					0.25*pi,...
+					0.5*pi,...
+					0.75*pi];
 		sonar_std = 0.05;						% Measurement Noise of the sonar [m]
 		sonar_random = 0.04;					% Probability of a random measurement
 		sonar_beamWidth = deg2rad(10);			% Sonar Beam Angles [rad]
@@ -41,12 +51,14 @@ classdef Robot < handle
 	properties(SetAccess=immutable)
 		% Ports Used to communicate with the Create
 		robotPort = [];    % Port used to communicate with the Roomba
+		tagNum = [];
 	end
 	
 	% Properties for replaying previously logged data
 	properties(SetAccess = private)
 		debugData = [];	% Stores a previously logged dataStore
 		debugIndex = 1;	% Current row in debugData from which to read
+		debugMode = false;
 	end
 
 	properties	
@@ -166,13 +178,11 @@ classdef Robot < handle
 			obj.robotPort.write(uint8(packet));
 			
 			% Read Response
-			msg = obj.robotPort.read(1026, 'uint8');
-			
-			% Drop Trailing Zeros
-			msg(1+find(msg, 1, 'last'):end) = [];
-			
+			msg = char(obj.robotPort.read(1026, 'uint8'));
+						
 			% Extract Response and Time Stamp
-			response = char(msg);
+			[time, ~,~,nI] = sscanf(msg, '%f', 1);
+			response = msg(nI:end);
 		end
 		
 		%% Define External Functions

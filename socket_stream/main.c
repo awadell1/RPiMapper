@@ -13,33 +13,41 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <time.h>
 
-// Set the Wheel Speeds
-#define SET_WHEEL_SPEED "SWV"
 
-// Get Odometry Measurement
-#define GET_ODOMETRY "GOM"
-
-// Get Range Measurement
-#define GET_RANGE_READING "GRM"
-
-// Get IMU Measurement
-#define GET_IMU_READING "GIR"
-
-// Close Connection
-#define SHUTDOWN_COMMS "SDC"
+///////////////////////////////////////////////////////////////////////
+// Command Tags
+#define SET_WHEEL_SPEED "SWV"		// Set the Wheel Speeds
+#define GET_ODOMETRY "GOM"			// Get Odometry Measurement
+#define GET_RANGE_READING "GRM"		// Get Range Measurement
+#define GET_IMU_READING "GIR"		// Get IMU Measurement
+#define SHUTDOWN_COMMS "SDC"		// Close Connection
+///////////////////////////////////////////////////////////////////////
 
 // Define Port to listen on
 #define RPI_PORT 1618
 
 // Set the max size of messages to be sent
-#define MAX_MSG_SIZE 1026
-
-// Set the number of sonars
-#define NUM_SONAR 8
+#define SOCKET_MSG_SIZE 1026
 
 // Set the Arduino Address
 #define ARDUINO_I2C 0x05
+#define I2C_MSG_SIZE 32
+
+// Constants
+#define PI 3.14159265359
+#define MM_TO_M 0.001
+
+// Define Wheel Parameters
+#define WHEEL_DIAMETER_MM 120
+#define WHEEL_NSPOKE 12
+#define WHEEl_2_CENTER_MM 400
+#define ENCODER_MM_PER_PULSE ((WHEEL_DIAMETER_MM/WHEEL_NSPOKE) * PI)
+
+// Sonar Measurements calculations
+#define NUM_SONAR 8
+#define SONAR_TOF_MM 13.61
 
 // Global variables
 int i2c_bus = 0;        // File handle for i2c bus
@@ -55,213 +63,278 @@ int pollArduino(char buffer[], const char msg[], const int buffSize);
 
 int openI2C();
 
+void str2double(double* num, const char str[], const int nNum);
+
+int openSocket();
+
 void error(const char *msg)
 {
-    perror(msg);
-    exit(1);
+	perror(msg);
+	exit(1);
 }
 
 int main(int argc, char *argv[])
 {
-    // Setup Signal Handler
-    signal(SIGINT, sighandler);
+	// Setup Signal Handler
+	signal(SIGINT, sighandler);
 
-    // Setup I2C Connection to Arduino
-    if (openI2C() != 1) {return -1;}
-   
-    // Create variables to store connection information
-    int portno;         // portno:      The port the server listens on
-    socklen_t clilen;   // clilen:      The length of the client address
+	// Setup I2C Connection to Arduino
+	if (openI2C() != 1) {return -1;}
 
-    // Open Socket
-    struct sockaddr_in serv_addr, cli_addr;
-    int option =1;
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
-    if (sockfd < 0) error("ERROR opening socket");
+	// Setup Socket Connection to Computer
+	if (openSocket() !=  1) return -1;   
 
-    // Set Address and Port Number
-    bzero((char *) &serv_addr, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(RPI_PORT);
+	// Start Connection Timer
+	time_t startTime = time(NULL);
 
-    // Bind Port settings to socket
-    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
-        error("ERROR on binding");
+	// Create Buffer for reading and sending messages
+	char sendBuff[SOCKET_MSG_SIZE];
+	char recvBuff[SOCKET_MSG_SIZE];
 
-    // Wait for a client to connect
-    listen(sockfd, 1);
-    clilen = sizeof(cli_addr);
-    printf("Waiting for client to connect...\n");
-    clientfd = -1;
-    while (clientfd < 0){
-        clientfd = accept(sockfd,
-                          (struct sockaddr *) &cli_addr,
-                          &clilen);
-        // Check connection status
-        if (clientfd < 0) printf("ERROR: Unable to accept client\n");
-    }
-    printf("SUCCESS: Client Connected\n");
+	int isAlive = 1;    // Flag for client is still connected
+	size_t n;             // Length of received/sent message
+	int msgStatus = -1;     // Response from processMsg
+	double respTime;        // Stores the time at which the msg is responded too (roughly), in seconds since start
+	int errorCount = 0;
+	while (isAlive==1){
+		// Clear the buffers
+		memset(sendBuff, 0, sizeof(sendBuff));
+		memset(recvBuff, 0, sizeof(recvBuff));
 
-    // Start Connection Timer
-    time_t startTime = time(NULL);
+		// Read Message from client
+		n = read(clientfd, recvBuff, sizeof(recvBuff)-1);
 
-    // Create Buffer for reading and sending messages
-    char sendBuff[MAX_MSG_SIZE];
-    char recvBuff[MAX_MSG_SIZE];
+		// Check for receive error
+		if (n<0){
+			printf("ERROR: Reading message from socket\n");
+			errorCount++;
+		} else {
+			// Display message
+			printf("RECV: %s\n", recvBuff);
 
-    int isAlive = 1;    // Flag for client is still connected
-    size_t n;             // Length of received/sent message
-    int msgStatus = -1;     // Response from processMsg
-    double respTime;        // Stores the time at which the msg is responded too (roughly), in seconds since start
-    int errorCount = 0;
-    while (isAlive==1){
-        // Clear the buffers
-        bzero(sendBuff, sizeof(sendBuff));
-        bzero(recvBuff, sizeof(recvBuff));
+			// Prepend Msg with Receive time
+			respTime = time(NULL) - startTime;
+			sprintf(sendBuff, "%f ", respTime);
 
-        // Read Message from client
-        n = read(clientfd, recvBuff, sizeof(recvBuff)-1);
+			// Process message
+			msgStatus = processMsg(sendBuff, recvBuff);
 
-        // Check for receive error
-        if (n<0){
-            printf("ERROR: Reading message from socket\n");
-            errorCount++;
-        } else {
-            // Display message
-            printf("RECV: %s\n", recvBuff);
+			// Report Success
+			n = write(clientfd, sendBuff, sizeof(sendBuff));
+			if (n < 0) printf("ERROR: Unable to write to client");
 
-            // Prepend Msg with Receive time
-            respTime = time(NULL) - startTime;
-            sprintf(sendBuff, "%f ", respTime);
+			// Check for Exit Flag
+			if(msgStatus < 0) isAlive = 0;
+		}
 
-            // Process message
-            msgStatus = processMsg(sendBuff, recvBuff);
+		// Check for too many errors
+		if(errorCount > 20) isAlive = 0;
+	}
 
-            // Report Success
-            n = write(clientfd, sendBuff, sizeof(sendBuff));
-            if (n < 0) printf("ERROR: Unable to write to client");
+	// Close the connection
+	close(clientfd);
+	close(sockfd);
 
-            // Check for Exit Flag
-            if(msgStatus < 0) isAlive = 0;
-        }
+	return 0;
+}
 
-        // Check for too many errors
-        if(errorCount > 20) isAlive = 0;
-    }
+int openSocket(){
+	// Create variables to store connection information
+	int portno;         // portno:      The port the server listens on
+	socklen_t clilen;   // clilen:      The length of the client address
 
-    // Close the connection
-    close(clientfd);
-    close(sockfd);
+	// Open Socket
+	struct sockaddr_in serv_addr, cli_addr;
+	int option =1;
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+	if (sockfd < 0) error("ERROR opening socket");
 
-    return 0;
+	// Set Address and Port Number
+	memset((char *) &serv_addr, 0, sizeof(serv_addr));
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	serv_addr.sin_port = htons(RPI_PORT);
+
+	// Bind Port settings to socket
+	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+		error("ERROR on binding");
+
+	// Wait for a client to connect
+	listen(sockfd, 1);
+	clilen = sizeof(cli_addr);
+	printf("Waiting for client to connect...\n");
+	clientfd = -1;
+	while (clientfd < 0){
+		clientfd = accept(sockfd,
+						  (struct sockaddr *) &cli_addr,
+						  &clilen);
+		// Check connection status
+		if (clientfd < 0) printf("ERROR: Unable to accept client\n");
+	}
+	printf("SUCCESS: Client Connected\n");
+
+	return 1;
 }
 
 // Process MSG
 int processMsg(char sendBuff[], const char* msg) {
-    // Report Message
-    printf("\tMSG: %s\n", msg);
+	// Report Message
+	printf("\tMSG: %s\n", msg);
 
-    // Message Response
-    int startIndex = 8;
-    char resp[MAX_MSG_SIZE];
-    int status;
+	// Message Response
+	int startIndex = 8;
+	char resp[SOCKET_MSG_SIZE];
+	int status;
 
-    if (strncmp(msg, SET_WHEEL_SPEED, 3) == 0) {
-        strncpy(resp, "25,26", 5);
-        status = 1;
-    } else if (strncmp(msg, GET_ODOMETRY, 3) == 0) {
-        strncpy(resp, "Goodbye", 7);
-        status = -1;
-    } else if (strncmp(msg, GET_RANGE_READING, 3) == 0) {
-        // Request Sonar Readings from Arduino
-        int n = 16;
-        char sonarData[n];
-        char cmd[n];
-        int i;
-        for(i=0; i < NUM_SONAR; i++){
-            // Construct Command 
-            sprintf(cmd, "s%d", i);
+	if (strncmp(msg, SET_WHEEL_SPEED, 3) == 0) {
+		// Set the wheel speeds
+		char motorState[I2C_MSG_SIZE];
+		
+		// Create Message for Arduino
+		char cmd[I2C_MSG_SIZE];
+		sprintf(cmd, "W%s", msg+3);
+	  
+		// Send Command to Arduino
+		pollArduino(motorState, cmd, I2C_MSG_SIZE);
+		
+		// ACK Motor Command
+		strcat(sendBuff, motorState);
+		strcat(sendBuff, " ");
+		status = 1;
+		
+	} else if (strncmp(msg, GET_ODOMETRY, 3) == 0) {
+		// Request Odmetry Readings from Arduino
+		char odometryData[I2C_MSG_SIZE];
+		int dataSize = pollArduino(odometryData, "O", I2C_MSG_SIZE);
+		
+		// Check Read was successful
+		if(dataSize <= 0) return -1;
 
-            // Poll Arduino
-            int dataSize = pollArduino(sonarData, cmd, n);
+		// Convert to double
+		double wheelTravel[2] = {0};
+		str2double(wheelTravel, odometryData, 2);
 
-            // Append to sendBuff
-            strcat(sendBuff, sonarData);
-            strcat(sendBuff, " ");
-        }
+		// Convert Clicks to Fwd Distance and Angular Rotation
+		double FwdDist, AngTurn;
+		FwdDist = MM_TO_M * ENCODER_MM_PER_PULSE * (wheelTravel[0] + wheelTravel[1])/2;
+		AngTurn = MM_TO_M * ENCODER_MM_PER_PULSE * (wheelTravel[0] - wheelTravel[1])/ WHEEl_2_CENTER_MM;
 
-        return status;
-    } else if (strncmp(msg, GET_IMU_READING, 3) == 0) {
-        strncpy(resp, "Goodbye", 7);
-        status = -1;
-    } else if (strncmp(msg, SHUTDOWN_COMMS, 3) == 0) {
-        strncpy(resp, "Goodbye", 7);
-        status = -1;
-    }
-    else {
-        // Echo message
-        strcpy(resp, msg);
-        status = 1;
-    }
+		// Report Odometry to Computer
+		sprintf(sendBuff + strlen(sendBuff), "%.f %.f ", FwdDist, AngTurn);
 
-    // Check that response is not too long
-    size_t respLen = strlen(resp);
-    if (respLen > (MAX_MSG_SIZE - startIndex - 1)) {
-        respLen = MAX_MSG_SIZE - startIndex - 1;
-    }
+		status = 1;
 
-    // Copy response into send buffer
-    strncpy(sendBuff+startIndex, resp, respLen);
+	} else if (strncmp(msg, GET_RANGE_READING, 3) == 0) {
+		// Request Sonar Readings from Arduino
+		char sonarData[I2C_MSG_SIZE];
+		char cmd[I2C_MSG_SIZE];
+		for(int i=0; i < NUM_SONAR; i++){
+			// Construct Command to get Sonar Reading
+			sprintf(cmd, "s%d", i);
 
-    return status;
+			// Poll Arduino
+			int dataSize = pollArduino(sonarData, cmd, I2C_MSG_SIZE);
+
+			// Compute Sonar Measurement
+			double sonar = strtod(sonarData, NULL) * SONAR_TOF_MM * MM_TO_M;
+
+			// Append to sendBuff
+			sprintf(sendBuff + strlen(sendBuff), "%.f ", sonar);
+		}
+		status = 1;
+
+	} else if (strncmp(msg, GET_IMU_READING, 3) == 0) {
+		char msg[] = "ERROR IMU NOT CONNECTED";
+		strncpy(resp, "msg", strlen(msg));
+		status = 1;
+
+	} else if (strncmp(msg, SHUTDOWN_COMMS, 3) == 0) {
+		strncpy(resp, "Goodbye", 7);
+		status = -1;
+
+	} else {
+		// Echo message
+		strcpy(resp, msg);
+		status = 1;
+	}
+
+	// Check that response is not too long
+	size_t respLen = strlen(resp);
+	if (respLen > (SOCKET_MSG_SIZE - startIndex - 1)) {
+		respLen = SOCKET_MSG_SIZE - startIndex - 1;
+	}
+
+	// Copy response into send buffer
+	strncpy(sendBuff+startIndex, resp, respLen);
+
+	return status;
 }
 
 int pollArduino(char buffer[], const char msg[], const int buffSize){
-    // Send msg to arduino
-    int n = write(i2c_bus, msg, strlen(msg));
-    if (n == -1){
-        return -1;
-    }
-    
-    // Receive Message from arduino
-    read(i2c_bus, buffer, buffSize);
-    strtok(buffer, "\n");
-  
-    // Print Buffer
-    printf("%s \n", buffer);
+	char buf[128];
+	sprintf(buf, "\tSending to Arduino: %s \n", msg);
+	printf(buf);
 
-    // Return size of buffer
-    return strlen(buffer);
+	// Send msg to arduino
+	int n = write(i2c_bus, msg, strlen(msg));
+	if (n == -1){
+		return -1;
+	}
+	
+	// Receive Message from arduino
+	read(i2c_bus, buffer, buffSize);
+	strtok(buffer, "\n");
+  
+	// Print Response
+	sprintf(buf, "\tRecieved from Arduino: %s \n", buffer);
+	printf(buf);
+
+	// Return size of buffer
+	return strlen(buffer);
 }
 
 int openI2C(){
-    // Open Connection to bus
-    if ((i2c_bus = open("/dev/i2c-1", O_RDWR)) < 0) {
-        printf("Failed to open the bus.");
-        /* ERROR HANDLING; you can check errno to see what went wrong */
-        return -1;
-    close(i2c_bus);
-    }
+	// Open Connection to bus
+	if ((i2c_bus = open("/dev/i2c-1", O_RDWR)) < 0) {
+		printf("Failed to open the bus.");
+		/* ERROR HANDLING; you can check errno to see what went wrong */
+		return -1;
+	close(i2c_bus);
+	}
 
-    // Attempt to talk to Slave
-    if (ioctl(i2c_bus,I2C_SLAVE, ARDUINO_I2C) < 0) {
-        printf("Failed to acquire bus access and/or talk to slave.\n");
-        /* ERROR HANDLING; you can check errno to see what went wrong */
-        return -1;
-    }
+	// Attempt to talk to Slave
+	if (ioctl(i2c_bus,I2C_SLAVE, ARDUINO_I2C) < 0) {
+		printf("Failed to acquire bus access and/or talk to slave.\n");
+		/* ERROR HANDLING; you can check errno to see what went wrong */
+		return -1;
+	}
 
-    // Success
-    return 1;
+	// Success
+	return 1;
 }
 
 void sighandler(int signum){
-    // Close everything
-    close(i2c_bus);
-    close(sockfd);
-    close(clientfd);
-    
-    // Exit
-    exit(-1);    
+	// Close everything
+	close(i2c_bus);
+	close(sockfd);
+	close(clientfd);
+	
+	// Exit
+	exit(-1);    
+}
+
+void str2double(double* num, const char str[], const int nNum){
+// str2double: Extracts at most n double number from string
+
+	// Pointer to start of unparsed str
+	char* pEnd;
+	
+	// Get first number
+	num[0] = strtod(str, &pEnd);
+	
+	// Get the rest of the numbers
+	for(int i = 1; i < nNum; i++){
+		num[i] = strtod(pEnd, &pEnd);
+	}
 }

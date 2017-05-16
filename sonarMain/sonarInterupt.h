@@ -63,9 +63,6 @@ ISR(TIMER1_COMPA_vect){
 	} else if (sonarPort[priorSonar] == 'D'){
 		PCMSK2 &= ~sonarPin[priorSonar];
 	}
-
-	//Toggle LED to indicate start of cycle
-	PORTB ^= (1<<PB5);
 		
 	//If Sonar Measurement > MaxDistance Or Zero -> Bad Reading
 	if((SonarReadingNew >= MaxDistance) || (SonarReadingNew == 0)){
