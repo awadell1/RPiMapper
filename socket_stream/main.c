@@ -13,7 +13,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
-
+#include <time.h>
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -98,8 +98,8 @@ int main(int argc, char *argv[])
 	int errorCount = 0;
 	while (isAlive==1){
 		// Clear the buffers
-		bzero(sendBuff, sizeof(sendBuff));
-		bzero(recvBuff, sizeof(recvBuff));
+		memset(sendBuff, 0, sizeof(sendBuff));
+		memset(recvBuff, 0, sizeof(recvBuff));
 
 		// Read Message from client
 		n = read(clientfd, recvBuff, sizeof(recvBuff)-1);
@@ -151,7 +151,7 @@ int openSocket(){
 	if (sockfd < 0) error("ERROR opening socket");
 
 	// Set Address and Port Number
-	bzero((char *) &serv_addr, sizeof(serv_addr));
+	memset((char *) &serv_addr, 0, sizeof(serv_addr));
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
 	serv_addr.sin_port = htons(RPI_PORT);
@@ -184,7 +184,7 @@ int processMsg(char sendBuff[], const char* msg) {
 
 	// Message Response
 	int startIndex = 8;
-	char resp[MAX_MSG_SIZE];
+	char resp[SOCKET_MSG_SIZE];
 	int status;
 
 	if (strncmp(msg, SET_WHEEL_SPEED, 3) == 0) {
@@ -212,13 +212,13 @@ int processMsg(char sendBuff[], const char* msg) {
 		if(dataSize <= 0) return -1;
 
 		// Convert to double
-		double wheelTravel[2] = {0}};
+		double wheelTravel[2] = {0};
 		str2double(wheelTravel, odometryData, 2);
 
 		// Convert Clicks to Fwd Distance and Angular Rotation
 		double FwdDist, AngTurn;
 		FwdDist = MM_TO_M * ENCODER_MM_PER_PULSE * (wheelTravel[0] + wheelTravel[1])/2;
-		AngTurn = MM_TO_M * ENCODER_MM_PER_PULSE * (wheelTravel[0] - wheelTravel[1])/ WHEEl_2_CENTER_MMH;
+		AngTurn = MM_TO_M * ENCODER_MM_PER_PULSE * (wheelTravel[0] - wheelTravel[1])/ WHEEl_2_CENTER_MM;
 
 		// Report Odometry to Computer
 		sprintf(sendBuff + strlen(sendBuff), "%.f %.f ", FwdDist, AngTurn);
@@ -237,7 +237,7 @@ int processMsg(char sendBuff[], const char* msg) {
 			int dataSize = pollArduino(sonarData, cmd, I2C_MSG_SIZE);
 
 			// Compute Sonar Measurement
-			double sonar = strtod(sonarDatar, NULL) * SONAR_TOF_MM * MM_TO_M;
+			double sonar = strtod(sonarData, NULL) * SONAR_TOF_MM * MM_TO_M;
 
 			// Append to sendBuff
 			sprintf(sendBuff + strlen(sendBuff), "%.f ", sonar);
@@ -261,8 +261,8 @@ int processMsg(char sendBuff[], const char* msg) {
 
 	// Check that response is not too long
 	size_t respLen = strlen(resp);
-	if (respLen > (MAX_MSG_SIZE - startIndex - 1)) {
-		respLen = MAX_MSG_SIZE - startIndex - 1;
+	if (respLen > (SOCKET_MSG_SIZE - startIndex - 1)) {
+		respLen = SOCKET_MSG_SIZE - startIndex - 1;
 	}
 
 	// Copy response into send buffer
@@ -328,7 +328,7 @@ void str2double(double* num, const char str[], const int nNum){
 // str2double: Extracts at most n double number from string
 
 	// Pointer to start of unparsed str
-	char* pEnd; pEnd = &str;
+	char* pEnd;
 	
 	// Get first number
 	num[0] = strtod(str, &pEnd);
