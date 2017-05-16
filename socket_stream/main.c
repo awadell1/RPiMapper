@@ -57,6 +57,9 @@ int clientfd = 0;       // File handle for client socket
 // Declare Functions
 void sighandler(int signum);
 
+
+void shutdownComms();
+
 int processMsg(char sendBuff[], const char* msg);
 
 int pollArduino(char buffer[], const char msg[], const int buffSize);
@@ -77,6 +80,9 @@ int main(int argc, char *argv[])
 {
 	// Setup Signal Handler
 	signal(SIGINT, sighandler);
+        signal(SIGTERM, sighandler);
+        signal(SIGHUP, sighandler);
+        signal(SIGQUIT, sighandler);
 
 	// Setup I2C Connection to Arduino
 	if (openI2C() != 1) {return -1;}
@@ -132,8 +138,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Close the connection
-	close(clientfd);
-	close(sockfd);
+        shutdownComms();
 
 	return 0;
 }
@@ -229,7 +234,8 @@ int processMsg(char sendBuff[], const char* msg) {
 		// Request Sonar Readings from Arduino
 		char sonarData[I2C_MSG_SIZE];
 		char cmd[I2C_MSG_SIZE];
-		for(int i=0; i < NUM_SONAR; i++){
+		double sonar = 0;
+                for(int i=0; i < NUM_SONAR; i++){
 			// Construct Command to get Sonar Reading
 			sprintf(cmd, "s%d", i);
 
@@ -237,7 +243,7 @@ int processMsg(char sendBuff[], const char* msg) {
 			int dataSize = pollArduino(sonarData, cmd, I2C_MSG_SIZE);
 
 			// Compute Sonar Measurement
-			double sonar = strtod(sonarData, NULL) * SONAR_TOF_MM * MM_TO_M;
+                        sonar = strtod(sonarData, NULL)* SONAR_TOF_MM * MM_TO_M;
 
 			// Append to sendBuff
 			sprintf(sendBuff + strlen(sendBuff), "%.f ", sonar);
@@ -266,7 +272,8 @@ int processMsg(char sendBuff[], const char* msg) {
 	}
 
 	// Copy response into send buffer
-	strncpy(sendBuff+startIndex, resp, respLen);
+	//strncpy(sendBuff+startIndex, resp, respLen);
+        printf("%s\n", sendBuff);
 
 	return status;
 }
@@ -315,13 +322,11 @@ int openI2C(){
 }
 
 void sighandler(int signum){
-	// Close everything
-	close(i2c_bus);
-	close(sockfd);
-	close(clientfd);
+    // Close comms
+    shutdownComms();	
 	
-	// Exit
-	exit(-1);    
+    // Exit
+    exit(-1);    
 }
 
 void str2double(double* num, const char str[], const int nNum){
@@ -337,4 +342,10 @@ void str2double(double* num, const char str[], const int nNum){
 	for(int i = 1; i < nNum; i++){
 		num[i] = strtod(pEnd, &pEnd);
 	}
+}
+void shutdownComms(){
+  // Closes connections to everything
+  close(i2c_bus);
+  close(sockfd);
+  close(clientfd);
 }
