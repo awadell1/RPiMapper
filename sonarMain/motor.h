@@ -12,7 +12,7 @@
 // Right Motor	OCR0A	PD6		D6
 
 // PWM Compare Levels
-#define PWM_15 96
+#define PWM_15 93
 #define PWM_DS 0.13
 
 // Motor Direction 

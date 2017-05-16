@@ -3,13 +3,17 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <Wire.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 //Comment out to disable serial debugging
 #define debugOn
 #ifdef debugOn
 	//#define DEBUG_ODOMETRY // Enable Odometry Debugging
-	//#define DEBUG_MOTOR
+	#define DEBUG_MOTOR
 	//#define DEBUG_MOTOR_TIMING
+	#define DEBUG_COMMS
 #endif
 
 // Define Buffer Sizes
@@ -38,6 +42,12 @@ void SetupSonar(void);
 char i2c_buff[32];
 int i2c_buffer_ready = 0;
 int i2c_buffer_len = 0;
+
+// Function declarations
+void SetupSonar(void);
+void SetupI2C(void);
+void SetupOdometry(void);
+void str2int(int* num, const char str[], const int nNum);
 
 extern volatile unsigned long SonarReading[];
 
@@ -78,13 +88,7 @@ int main(void){
     {
 		//Required Delay for Sonar Loop, Do Not Remove or Reduce
 		_delay_ms(30);
-
-		// Update Motor Speeds
-		for(int i = -100; i < 100; i++){
-			setMotorSpeed(i, i);
-			_delay_ms(100);
-		}
-    }
+	}
 }
 
 //Set Up I/O and enable interrupts for running the Sonar Array 
@@ -151,17 +155,44 @@ void I2C_Receive(int numBytes){
 		// Write back sonar reading
 		memset(i2c_buff, 0, sizeof(i2c_buff));
 		sprintf(i2c_buff, "%u\n", SonarReading[sonar]);
-	} else if(buff[1] == 'o'){
+
+	} else if(buff[0] == 'W'){
+		// Set Wheel Speeds
+
+		// Read in wheel speeds
+		int speed[2] = {0};
+		str2int(speed, buff+1, 2);
+
+		// Update Wheel Speeds
+		setMotorSpeed(speed[0], speed[1]);
+
+		memset(i2c_buff, 0, sizeof(i2c_buff));
+		sprintf(i2c_buff, "Success\n");
+
+	} else if(buff[0] == 'o'){
 		// Write back odometry counts
 		memset(i2c_buff, 0, sizeof(i2c_buff));
 		sprintf(i2c_buff, "%u %u\n", leftCount, rightCount);
-	} else if(buff[1] == 'S'){
+
+	} else if(buff[0] == 'S'){
 		// Write back message
 		sprintf(i2c_buff, "Hello World\n");
+
 	} else {
 		// Write back error
 		sprintf(i2c_buff, "ERROR\n", SonarReading[0]);
 	}
+	
+	#ifdef DEBUG_COMMS
+		// Report Motor Speeds
+		char debug_buff[64];
+		sprintf(debug_buff, "CMD: [%s]\n", buff);
+		Serial.print(debug_buff);
+
+		sprintf(debug_buff, "RESP: [%s]\n", i2c_buff);
+		Serial.print(debug_buff);
+	#endif
+
 	i2c_buffer_ready = 0; // Mark Arduino as ready
 	return;
 }
@@ -209,4 +240,18 @@ void setupMotor(void){
 
 	// Enable Timer
 	TCCR0B |= (1<<CS00);
+}
+void str2int(int* num, const char str[], const int nNum){
+// str2int: Extracts at most n int number from string
+
+	// Pointer to start of unparsed str
+	char* pEnd;
+	
+	// Get first number
+	num[0] = strtol(str, &pEnd, 10);
+	
+	// Get the rest of the numbers
+	for(int i = 1; i < nNum; i++){
+		num[i] = strtol(pEnd, &pEnd, 10);
+	}
 }
