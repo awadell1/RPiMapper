@@ -12,7 +12,7 @@ classdef Robot < handle
 
 		%% Physical Parameters of the Create Robot
 		radius = 0.16;				% radius of the Create Robot
-		wheel2center = 0.13;		% Distance between center of robot and wheels
+		wheel2center = 0.05;		% Distance between center of robot and wheels
 		maxVelocity = 0.20;			% Sets the max speed of the robot [m/s]
 		drive_epsilon = 0.15;		% Tuning Parameter for feedback linearization
 		fwdVel_std = 0.01;			% Std. dev of Fwd Velocity Command

@@ -9,4 +9,4 @@ wheelVel = [1/2,	1/2;....
 			-1/d,	1/d] \ [FwdVel; AngVel];
 
 % Send Wheel Speeds to Robot
-robot.sendPacket('wheelSpeed,%0.3f,%0.3f', wheelVel(1), wheelVel(2))
+robot.sendPacket('SWV %0.3f %0.3f', wheelVel(1), wheelVel(2))

@@ -10,20 +10,14 @@
 //Comment out to disable serial debugging
 #define debugOn
 #ifdef debugOn
-	//#define DEBUG_ODOMETRY // Enable Odometry Debugging
-	#define DEBUG_MOTOR
+	#define DEBUG_ODOMETRY // Enable Odometry Debugging
+	//#define DEBUG_MOTOR
 	//#define DEBUG_MOTOR_TIMING
 	#define DEBUG_COMMS
 #endif
 
 // Define Buffer Sizes
 #define BUFFER_LENGTH 64
-
-// Odometry Setup
-#include "odometryInterupt.h"
-void SetupOdometry(void);
-extern volatile unsigned long leftCount;
-extern volatile unsigned long rightCount;
 
 // Sonar ISR
 #include "sonarInterupt.h"
@@ -32,11 +26,21 @@ void SetupSonar(void);
 // Motor
 #include "motor.h"
 #include "motorInterrupt.h"
+extern volatile unsigned int leftSpeed;
+extern volatile unsigned int rightSpeed;
 
 // Define Motor States
 // timerState 0 -> Generate Control Pulse
 // timerState 1 -> Hold off for 20ms
 #include "motorInterrupt.h"
+
+// Odometry Setup
+void SetupOdometry(void);
+volatile unsigned long rightCount = 0;
+ISR(INT1_vect){rightCount++;}
+
+volatile unsigned long leftCount = 0;
+ISR(INT0_vect){leftCount++;}
 
 // I2C Response Buffer
 char i2c_buff[32];
@@ -87,6 +91,13 @@ int main(void){
 	//Begin Infinite Loop
 	while(1)
     {
+    	// Set LED On
+		PORTB ^= (1<<PB5);
+
+		char buff[32];
+		sprintf(buff, "Left: %u Right: %u\n", leftCount, rightCount);
+		Serial.print(buff);
+
 		//Required Delay for Sonar Loop, Do Not Remove or Reduce
 		_delay_ms(30);
 	}
@@ -122,8 +133,11 @@ void SetupI2C(void){
 
 void SetupOdometry(void){
 	// Enable Pin Change interrupts
-	EICRA |= (1<<ISC10) | (1<<ISC00);
-	EIMSK |= (1<<INT0) | (1<<INT1);
+	EICRA |= ((1<<ISC10) | (1<<ISC00));
+	EIMSK |= ((1<<INT0) | (1<<INT1));
+
+	// Set Pins to Input
+	DDRD &= ~((1<<PD2) | (1<<PD3));
 }
 
 void I2C_Request(){
@@ -154,7 +168,6 @@ void I2C_Receive(int numBytes){
 		sscanf(buff+1, "%d", &sonar);
 
 		// Write back sonar reading
-		memset(i2c_buff, 0, sizeof(i2c_buff));
 		sprintf(i2c_buff, "%u\n", SonarReading[sonar]);
 
 	} else if(buff[0] == 'W'){
@@ -167,13 +180,17 @@ void I2C_Receive(int numBytes){
 		// Update Wheel Speeds
 		setMotorSpeed(speed[0], speed[1]);
 
-		memset(i2c_buff, 0, sizeof(i2c_buff));
 		sprintf(i2c_buff, "Success\n");
 
-	} else if(buff[0] == 'o'){
+	} else if(buff[0] == 'O'){
 		// Write back odometry counts
-		memset(i2c_buff, 0, sizeof(i2c_buff));
 		sprintf(i2c_buff, "%u %u\n", leftCount, rightCount);
+
+		#ifdef DEBUG_ODOMETRY
+			char buff[32];
+			sprintf(buff, "Left: %u Right: %u\n", leftCount, rightCount);
+			Serial.print(buff);
+		#endif
 
 	} else if(buff[0] == 'S'){
 		// Write back message
@@ -181,7 +198,7 @@ void I2C_Receive(int numBytes){
 
 	} else {
 		// Write back error
-		sprintf(i2c_buff, "ERROR\n", SonarReading[0]);
+		sprintf(i2c_buff, "ERROR\n");
 	}
 	
 	#ifdef DEBUG_COMMS
@@ -203,20 +220,15 @@ void setMotorSpeed(int left, int right){
 	// 100 -> Full Speed Forward
 	// -100 -> Full Speed Reverse
 
-	OCR0B = PWM_15 + LEFT_DIR * left * PWM_DS;
-	OCR0A = PWM_15 + RIGHT_DIR * right * PWM_DS;
+	leftSpeed = PWM_15 + LEFT_DIR * left * PWM_DS;
+	rightSpeed = PWM_15 + RIGHT_DIR * right * PWM_DS;
 
 	#ifdef DEBUG_MOTOR
 		// Report Motor Speeds
 		char buff[64];
 		sprintf(buff, "Left Motor Speed: %d Timer %d\nRight Motor Speed: %d Timer %d\n",
-			left, OCR0B, right, OCR0A);
+			left, leftSpeed, right, rightSpeed);
 		Serial.print(buff);
-
-		// Report Timer Value
-		sprintf(buff, "TCNT0 Value: %d Pre-scaler: %d \n", TCNT0, TCCR0B);
-		Serial.print(buff);
-
 	#endif
 }
 

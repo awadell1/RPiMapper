@@ -17,7 +17,7 @@
 
 // Motor Direction 
 #define LEFT_DIR 1
-#define RIGHT_DIR 1
+#define RIGHT_DIR -1
 
 void setupMotor();
 void setMotorSpeed(int left, int Right);

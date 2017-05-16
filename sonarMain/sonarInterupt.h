@@ -30,10 +30,10 @@
 volatile unsigned long SonarReading[nSonar] = {0};
 	
 //Initialize volatile long array to store new Sonar Reading pre-verification
-volatile unsigned long SonarReadingNew = {0};
+volatile unsigned long SonarReadingNew = 0;
 
 //Initialize volatile long array to store start times for Sonar Readings
-volatile unsigned long SonarReadingStart = {0};
+volatile unsigned long SonarReadingStart = 0;
 
 //Initialize register to store prior states of PORT
 volatile unsigned short SonarPinsLast = 0;

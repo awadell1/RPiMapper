@@ -4,10 +4,10 @@ figure
 t = []; l = [];
 h = plot(t, l);
 while true
-	str = robot.sendPacket('GOM');
+	[str, time] = robot.sendPacket('GOM')
 	d = sscanf(str, '%f');
 	l = [l, d(2)];
-	t = [t, d(1)];
+	t = [t, time];
 	
 	% Update Plot
 	plot(t,l)

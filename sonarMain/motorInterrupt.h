@@ -4,6 +4,9 @@
 #define TIMER_PRESCALE_1024 ((1<<CS00) | (1<<CS02))
 #define TIMER_PRESCALE_256 (1<<CS02)
 
+volatile unsigned int leftSpeed = 0;
+volatile unsigned int rightSpeed = 0;
+
 int timerState = 0;
 
 ISR(TIMER0_OVF_vect){
@@ -15,8 +18,9 @@ ISR(TIMER0_OVF_vect){
 
 	// Switch Timer State
 	if (timerState != 0){
-		// Set LED On
-		PORTB |= (1<<PB5);
+		// Set OCR0x
+		OCR0B = leftSpeed;
+		OCR0A = rightSpeed;
 
 		// Set Prescaler to 8
 		prescaler = TIMER_PRESCALE_256;
@@ -27,9 +31,6 @@ ISR(TIMER0_OVF_vect){
 		// Set Pins to High
 		PORTD |= (1<<PD5) | (1<<PD6);
 	} else {
-		// Set LED Off
-		PORTB &= ~(1<<PB5);
-
 		// Set Pins to Low
 		PORTD &= ~((1<<PD5) | (1<<PD6));
 
