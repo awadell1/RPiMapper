@@ -52,18 +52,26 @@ if ~robot.debugMode
 
 	cmd = {'GOM', 'GRM', 'GIM'};
 	name = {'odometry', 'range', 'IMU'};
+	dSize = [2, 8, 0];
 	for i = 1:length(cmd)
 		% read sensor data from robot
 		try
 			[resp, time] = robot.sendPacket(cmd{i});
 			
 			% Parse resp
-			data = sscanf(resp, '%f');
+			data = sscanf(resp, '%f')';
 			
 			% Append to dataStore
-			dataStore.(name{i}) = [dataStore.(name{i}) ; ...
-				time data'];
+			if length(data) == dSize(i)
+				dataStore.(name{i}) = [dataStore.(name{i}); ...
+					toc, data];
+			else
+				dataStore.(name{i}) = [dataStore.(name{i}); ...
+					toc, nan(1, dSize(i))];
+			end
 		catch
+			dataStore.(name{i}) = [dataStore.(name{i}); ...
+				toc, nan(1, dSize(i))];
 			fprintf('Error retrieving or saving %s data.\n', name{i});
 		end
 	end

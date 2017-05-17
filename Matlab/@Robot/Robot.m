@@ -39,7 +39,7 @@ classdef Robot < handle
 					0.75*pi];
 		sonar_std = 0.05;						% Measurement Noise of the sonar [m]
 		sonar_random = 0.04;					% Probability of a random measurement
-		sonar_beamWidth = deg2rad(10);			% Sonar Beam Angles [rad]
+		sonar_beamWidth = deg2rad(45);			% Sonar Beam Angles [rad]
 
 		% Values greater than 1, widen sensor stdev given to particle filter
 		% Values less than 1, shrink the stdev given to particle filter
@@ -173,6 +173,12 @@ classdef Robot < handle
 			
 			% Create Packet
 			packet = sprintf(varargin{:});
+			
+			% Check for stale messages
+			if obj.robotPort.BytesAvailable
+				obj.robotPort.read;
+			end
+				
 			
 			% Send Message
 			obj.robotPort.write(uint8(packet));
