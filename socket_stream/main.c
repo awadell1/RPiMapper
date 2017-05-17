@@ -40,15 +40,16 @@
 #define MM_TO_M 0.001
 
 // Define Wheel Parameters
-#define WHEEL_SPEED_FACTOR 10
-#define WHEEL_DIAMETER 0.012
-#define WHEEL_NSPOKE 12
-#define WHEEl_2_CENTER 0.040
+#define WHEEL_SPEED_FACTOR 178
+#define WHEEL_DIAMETER 0.0762
+#define WHEEL_NSPOKE 8
+#define WHEEl_2_CENTER 0.07366
 #define ENCODER_PER_PULSE ((WHEEL_DIAMETER/WHEEL_NSPOKE) * PI)
 
 // Sonar Measurements calculations
 #define NUM_SONAR 8
-#define SONAR_TOF 0.01361
+#define SONAR_TOF 0.00022
+#define SONAR_MAX_RANGE 3
 
 // Global variables
 int i2c_bus = 0;        // File handle for i2c bus
@@ -121,7 +122,7 @@ int main(int argc, char *argv[])
 
 			// Prepend Msg with Receive time
 			respTime = time(NULL) - startTime;
-			sprintf(sendBuff, "%f ", respTime);
+			sprintf(sendBuff, "%.f ", respTime);
 
 			// Process message
 			msgStatus = processMsg(sendBuff, recvBuff);
@@ -131,7 +132,11 @@ int main(int argc, char *argv[])
 			if (n < 0) printf("ERROR: Unable to write to client");
 
 			// Check for Exit Flag
-			if(msgStatus < 0) isAlive = 0;
+			if(msgStatus < 0){
+                          errorCount++;
+                        } else {
+                          errorCount = 0;
+                        }
 		}
 
 		// Check for too many errors
@@ -225,10 +230,14 @@ int processMsg(char sendBuff[], const char* msg) {
 	} else if (strncmp(msg, GET_ODOMETRY, 3) == 0) {
 		// Request Odmetry Readings from Arduino
 		char odometryData[I2C_MSG_SIZE];
-		int dataSize = pollArduino(odometryData, "O", I2C_MSG_SIZE);
+		printf("Requesting Odometry\n");
+                int dataSize = pollArduino(odometryData, "O", I2C_MSG_SIZE);
 		
 		// Check Read was successful
-		if(dataSize <= 0) return -1;
+		if(dataSize <= 0){
+                    printf("ERROR: No Odometry Data Returned\n");
+                    return -1;
+                }
 
 		// Convert to double
 		double wheelTravel[2] = {0};
@@ -237,10 +246,10 @@ int processMsg(char sendBuff[], const char* msg) {
 		// Convert Clicks to Fwd Distance and Angular Rotation
 		double FwdDist, AngTurn;
 		FwdDist = ENCODER_PER_PULSE * (wheelTravel[0] + wheelTravel[1])/2;
-		AngTurn = ENCODER_PER_PULSE * (wheelTravel[0] - wheelTravel[1])/ WHEEl_2_CENTER;
+		AngTurn = ENCODER_PER_PULSE * (wheelTravel[0] - wheelTravel[1])/ (WHEEl_2_CENTER*2*PI);
 
 		// Report Odometry to Computer
-		sprintf(sendBuff + strlen(sendBuff), "%.f %.f ", FwdDist, AngTurn);
+		sprintf(sendBuff + strlen(sendBuff), "%.3f %.3f ", FwdDist, AngTurn);
 
 		status = 1;
 
@@ -260,23 +269,28 @@ int processMsg(char sendBuff[], const char* msg) {
                         sonar = strtod(sonarData, NULL)* SONAR_TOF;
 
 			// Append to sendBuff
-			sprintf(sendBuff + strlen(sendBuff), "%.f ", sonar);
-		}
+			if (sonar < SONAR_MAX_RANGE){
+                            sprintf(sendBuff + strlen(sendBuff), "%.3f ", sonar);
+		        } else{
+                            sprintf(sendBuff + strlen(sendBuff), "NaN ");
+                        }
+                }
 		status = 1;
 
 	} else if (strncmp(msg, GET_IMU_READING, 3) == 0) {
-		char msg[] = "ERROR IMU NOT CONNECTED";
-		strncpy(resp, "msg", strlen(msg));
+		// Report Failue
+                sprintf(sendBuff, "ERROR IMU NOT CONNECTED");
 		status = 1;
 
 	} else if (strncmp(msg, SHUTDOWN_COMMS, 3) == 0) {
-		strncpy(resp, "Goodbye", 7);
+		// Shutdown comms
+                sprintf(sendBuff, "Shutting down comms");
 		status = -1;
 
 	} else {
 		// Echo message
-		strcpy(resp, msg);
-		status = 1;
+		sprintf(sendBuff, "UNKNOWN COMMAND: [%s]", msg);
+                status = 1;
 	}
 
 	// Check that response is not too long
