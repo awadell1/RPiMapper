@@ -9,3 +9,5 @@ The RPiMapper consists of three main systems:
 
 This division of labor works to play to the strengths of each system, the Arduino generates the timing pulse required to control the motors, and precisely measures the sonar pulse width. The RPi3 then communicates with the Arduino using I2C and relays measurements over a web-socket to the host computer. To prevent timing issues on the Arduino, RPi3 receives raw measurements from the Arduino, which it then converts into SI units before sending the data along to the host computer. Similarly wheel speeds are given by the Host in m/s are converted into a percentage of max wheel speed before sending to the Arduino.
 Finally, the Host Computer uses a MATLAB script to update the occupancy grid based on the current sensor readings and estimated pose, and presents a GUI for setting the robot's forward and angular velocity. 
+
+# Design and Testing
