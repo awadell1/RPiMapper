@@ -22,20 +22,25 @@ global dataStore;
 
 % Create Maps
 prior = 0;
-nX = 100; nY = 100;
-edgeX = linspace(-0.5, 0.5, nX);
-edgeY = linspace(-0.5, 0.5, nY);
+nX = 200; nY = 200;
+edgeX = linspace(-2, 2, nX);
+edgeY = linspace(-2, 2, nY);
 MapOccSonar = gridData(edgeX, edgeY, prior);
 
 %Create Figures
 figure
 hold on
-subplot(1,2,1);
+subplot(1,3,1);
 mapFigSonar = plot(MapOccSonar);
 
-subplot(1,2,2);
+subplot(1,3,2);
 sonarBar = bar(robot.sonar_angle, 1:8);
 ylabel('Sonar Reading [m]');
+
+subplot(1,3,3);
+posePlot = plot(1, 1);
+ylabel('X Position [m]');
+ylabel('Y Position [m]');
 
 % Call up manual drive GUI
 global SONAR_OFFSET
@@ -63,7 +68,7 @@ while robot.status
 	pose0 = dataStore.truthPose(end,2:end);
 	u = robot.getData(dataStore, 'odometry');
 	pose = robot.intergrateOdom(pose0, u);
-	robot.setData(dataStore, 'truthPose', pose);
+	dataStore = robot.setData(dataStore, 'truthPose', pose);
     
     % Update Occupancy Grid
 	sonar = robot.getData(dataStore, 'range');
@@ -78,6 +83,10 @@ while robot.status
     
 	hold on
 	sonarBar.YData = sonar;
+	
+	hold on
+	posePlot.XData = dataStore.truthPose(:,2);
+	posePlot.YData = dataStore.truthPose(:,3);
 	drawnow
 	
     pause(0.1);

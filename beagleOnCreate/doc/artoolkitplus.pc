@@ -1,8 +1,0 @@
-prefix=/usr
-
-Name: artoolkitplus
-Description: ARToolKitPlus Augmented Reality library
-Version: 2.2.1
-Requires:
-Libs: -L${prefix}/lib -lARToolKitPlus
-Cflags: -I${prefix}/include/ARToolKitPlus

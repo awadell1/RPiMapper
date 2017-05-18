@@ -10,7 +10,7 @@
 //Comment out to disable serial debugging
 #define debugOn
 #ifdef debugOn
-	#define DEBUG_ODOMETRY // Enable Odometry Debugging
+	//#define DEBUG_ODOMETRY // Enable Odometry Debugging
 	//#define DEBUG_MOTOR
 	//#define DEBUG_MOTOR_TIMING
 	#define DEBUG_COMMS
@@ -106,10 +106,6 @@ int main(void){
     	// Set LED On
 		PORTB ^= (1<<PB5);
 
-		char buff[32];
-		sprintf(buff, "Left: %ld Right: %ld\n", leftCount, rightCount);
-		Serial.print(buff);
-
 		//Required Delay for Sonar Loop, Do Not Remove or Reduce
 		_delay_ms(30);
 	}
@@ -125,7 +121,7 @@ void SetupSonar(void){
 	PCICR |= (1 << PCIE0) | (1 << PCIE1) |  (1 << PCIE2);
 
 	//Set OCR1A to 30 mS
-	OCR1A = 7500;
+	OCR1A = 8000;
 
 	//Set Timer 1 to Clear Timer on Compare 
 	TCCR1B |= (1 << WGM12);

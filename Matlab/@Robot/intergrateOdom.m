@@ -27,12 +27,14 @@ pose = [-r.*sin(theta) + r.*sin(theta + w*dt)  ,...
 		 w.*dt] + pose0;
 
 % Correct for r = inf
-driveFwd = r == inf;
+driveFwd = r == inf || r == -inf;
 if any(driveFwd)
 	pose(driveFwd,:) =  pose0(driveFwd,:);
 	pose(driveFwd, 1:2) = pose(driveFwd, 1:2) + ...
 		repmat(V(driveFwd), 1, 2) .*...
 		[cos(theta(driveFwd)), sin(theta(driveFwd))];
+elseif isnan(r)
+	pose = pose0;
 end
 
 if nargout == 2

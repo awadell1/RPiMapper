@@ -88,13 +88,13 @@ obj= get(handles.figure_create,'UserData');
 % Check which key is pressed and set data appropriately
 keydown= eventdata.Key;  % Assume only one key pressed at a time
 if any(strcmp(keydown,{'uparrow' 'w'}))
-    fwdvel= fwdvel+0.05;
+    fwdvel= fwdvel+0.01;
 elseif any(strcmp(keydown,{'downarrow' 's'}))
-    fwdvel= fwdvel-0.05;
+    fwdvel= fwdvel-0.01;
 elseif any(strcmp(keydown,{'leftarrow' 'a'}))
-    angvel= angvel+0.1;
+    angvel= angvel+0.01;
 elseif any(strcmp(keydown,{'rightarrow' 'd'}))
-    angvel= angvel-0.1;
+    angvel= angvel-0.01;
 elseif any(strcmp(keydown,{'space' 'return' 'escape'}))
     fwdvel= 0;
     angvel= 0;
