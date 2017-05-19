@@ -164,7 +164,7 @@
 								</object>
 							</div>
 							<p>
-								The spoke counts for the left and right wheel are detected using Atmega328p's INT0 and INT1 pin change interrupts to detect both the rising and falling edges of the signal so as to maximize the resolution of the measurements. The spoke counts are incremented based on the current desired wheel speeds to differentiate between forwards and backwards motion. Upon recieving a request for odometry measurements from the RPi3 (Packet command "O"), the counts for the left and right wheel are transmitted over I2C and then reset to zero to prevent double counting. The RPi3 then uses the following formula to convert the odometry counts into distance traveled and angle rotated odometry measurement before forwarding the information along the Host computer.
+								The spoke counts for the left and right wheel are detected using Atmega328p's INT0 and INT1 pin change interrupts to detect both the rising and falling edges of the signal so as to maximize the resolution of the measurements. The spoke counts are incremented based on the current desired wheel speeds to differentiate between forwards and backwards motion. Upon receiving a request for odometry measurements from the RPi3 (Packet command "O"), the counts for the left and right wheel are transmitted over I2C and then reset to zero to prevent double counting. The RPi3 then uses the following formula to convert the odometry counts into distance traveled and angle rotated odometry measurement before forwarding the information along the Host computer.
 							</p>
 							<img src="images/eq_dist_traveled.svg" alt="Equation for computing distance traveled from encounder counts" class="eqBig"/>
 							<img src="images/eq_angle_turned.svg" alt="Equation for computing angle turned from encounder counts" class="eqBig"/>
@@ -178,7 +178,7 @@
 						</div>
 						<div class="yui-u">
 							<p>
-								The RPiMapper is driven using two <a href="https://www.parallax.com/product/900-00008">Parallax continuous rotation servos</a> controlled using the Atmega328p's 8bit TIMER0. Per Parallax's documentation for the motor, the motor is control by suppling a 1.3-1.7ms pulse every 20ms to the control line. In order to improve the resolution of motor speed control, the timer's prescaler switches between 64x during the control pulse and 1024x during the 20ms hold off, allowing for a total of 27 theoretical motor speeds.
+								The RPiMapper is driven using two <a href="https://www.parallax.com/product/900-00008">Parallax continuous rotation servos</a> controlled using the Atmega328p's 8bit TIMER0. Per Parallax's documentation for the motor, the motor is control by suppling a 1.3-1.7ms pulse every 20ms to the control line. In order to improve the resolution of motor speed control, the timer's prescaler switches between 256x during the control pulse and 1024x during the 20ms hold off, allowing for a total of 27 theoretical motor speeds.
 							</p>
 							<p>
 								The robot's motion is specified by the Host control program in terms of a forwards and angular velocity about the robot center, which is then converted into a left and right wheel speeds using the following equation:

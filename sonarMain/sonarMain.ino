@@ -10,14 +10,12 @@
 //Comment out to disable serial debugging
 #define debugOn
 #ifdef debugOn
-	//#define DEBUG_ODOMETRY // Enable Odometry Debugging
+	// Additional flags to for enabling/disabling debugging outputs
+	//#define DEBUG_ODOMETRY
 	//#define DEBUG_MOTOR
 	//#define DEBUG_MOTOR_TIMING
 	#define DEBUG_COMMS
 #endif
-
-// Define Buffer Sizes
-#define BUFFER_LENGTH 64
 
 // Sonar ISR
 #include "sonarInterupt.h"
@@ -26,28 +24,27 @@ void SetupSonar(void);
 // Motor
 #include "motor.h"
 #include "motorInterrupt.h"
+// Declare wheelSpeed variables as an extern so they can be read from here
 extern volatile unsigned int leftSpeed;
 extern volatile unsigned int rightSpeed;
 
-// Define Motor States
-// timerState 0 -> Generate Control Pulse
-// timerState 1 -> Hold off for 20ms
-#include "motorInterrupt.h"
-
 // Odometry Setup
 void SetupOdometry(void);
+
+// ISR to handle counting right motor encoder pulses
 volatile long rightCount = 0;
 ISR(INT1_vect){
-	if (rightSpeed < 93){
+	if (rightSpeed < PWM_15){
 		rightCount++;
 	} else {
 		rightCount--;
 	}
 }
 
+// ISR to handle counting left motor encoder pulses
 volatile long leftCount = 0;
 ISR(INT0_vect){
-	if (leftSpeed > 93){
+	if (leftSpeed > PWM_15){
 		leftCount++;
 	} else {
 		leftCount--;
@@ -55,9 +52,8 @@ ISR(INT0_vect){
 }
 
 // I2C Response Buffer
-char i2c_buff[32];
-int i2c_buffer_ready = 0;
-int i2c_buffer_len = 0;
+char i2c_buff[32];			// Char array to store response to RPi before sending
+int i2c_buffer_ready = 0;	// Flag for status of buffer 0: Buffer Ready -1: Buffer not ready
 
 // Function declarations
 void SetupSonar(void);
@@ -65,6 +61,7 @@ void SetupI2C(void);
 void SetupOdometry(void);
 void str2int(int* num, const char str[], const int nNum);
 
+// Declare SonarReading vector as an extern so it can be read from here
 extern volatile unsigned long SonarReading[];
 
 int main(void){
@@ -83,8 +80,10 @@ int main(void){
 	//////////////////////////////////////////////////////////////////////////
 	
 	#ifdef debugOn
+		// Report Running of Setup Function
 		Serial.print("Running Setup Functions\n");
 	#endif
+
 	SetupSonar();
 	SetupI2C();
 	SetupOdometry();
@@ -92,6 +91,7 @@ int main(void){
 	setMotorSpeed(0,0);
 
 	#ifdef debugOn
+		// Report Completion of Setup Function
 		Serial.print("Setup Functions Complete\n");
 	#endif
 
@@ -103,7 +103,7 @@ int main(void){
 	//Begin Infinite Loop
 	while(1)
     {
-    	// Set LED On
+    	// Toggle On-board LED to indicate cycles
 		PORTB ^= (1<<PB5);
 
 		//Required Delay for Sonar Loop, Do Not Remove or Reduce
@@ -121,7 +121,7 @@ void SetupSonar(void){
 	PCICR |= (1 << PCIE0) | (1 << PCIE1) |  (1 << PCIE2);
 
 	//Set OCR1A to 30 mS
-	OCR1A = 8000;
+	OCR1A = 7500;
 
 	//Set Timer 1 to Clear Timer on Compare 
 	TCCR1B |= (1 << WGM12);
@@ -149,10 +149,12 @@ void SetupOdometry(void){
 }
 
 void I2C_Request(){
+	// Check if the response message is ready
 	if(i2c_buffer_ready == 0){
-		// Write next char
+		// Respond with the I2C buffer
 		Wire.write(i2c_buff);
 	} else {
+		// Report Message is not yet ready
 		Wire.write("Busy\n");
 	}
 	return;
@@ -164,6 +166,7 @@ void I2C_Receive(int numBytes){
 	// Read at most 32 bytes
 	if(numBytes > 32) numBytes = 32;
 
+	// Read in the entire message
 	for(int i = 0; i < numBytes; i++){
 		buff[i] = Wire.read();
 	}
@@ -181,13 +184,14 @@ void I2C_Receive(int numBytes){
 	} else if(buff[0] == 'W'){
 		// Set Wheel Speeds
 
-		// Read in wheel speeds
+		// Read in desired wheel speeds
 		int speed[2] = {0};
 		str2int(speed, buff+1, 2);
 
 		// Update Wheel Speeds
 		setMotorSpeed(speed[0], speed[1]);
 
+		// Report success
 		sprintf(i2c_buff, "Success\n");
 
 	} else if(buff[0] == 'O'){
@@ -195,12 +199,13 @@ void I2C_Receive(int numBytes){
 		sprintf(i2c_buff, "%ld %ld\n", leftCount, rightCount);
 
 		#ifdef DEBUG_ODOMETRY
+			// Report Odometry counts via Serial for debugging
 			char buff[32];
 			sprintf(buff, "Left: %ld Right: %ld\n", leftCount, rightCount);
 			Serial.print(buff);
 		#endif
 
-		// Reset Counts
+		// Reset Encoder Counts
 		leftCount = 0; rightCount = 0;
 
 	} else if(buff[0] == 'S'){
@@ -231,11 +236,12 @@ void setMotorSpeed(int left, int right){
 	// 100 -> Full Speed Forward
 	// -100 -> Full Speed Reverse
 
+	// Compute the new timer values for the left and right motors
 	leftSpeed = PWM_15 + LEFT_DIR * left * PWM_DS;
 	rightSpeed = PWM_15 + RIGHT_DIR * right * PWM_DS;
 
 	#ifdef DEBUG_MOTOR
-		// Report Motor Speeds
+		// Report Motor Speeds and timer values
 		char buff[64];
 		sprintf(buff, "Left Motor Speed: %d Timer %d\nRight Motor Speed: %d Timer %d\n",
 			left, leftSpeed, right, rightSpeed);
@@ -259,6 +265,7 @@ void setupMotor(void){
 	TIMSK0 |= (1<<TOIE0) | (1<<OCF0A) | (1<<OCF0B);
 
 	#ifdef DEBUG_MOTOR
+		// Report success of motor setup
 		Serial.print("Motor Setup\n");
 	#endif
 

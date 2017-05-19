@@ -1,23 +1,26 @@
 #ifndef MOTOR_ISR
 #define MOTOR_ISR
 
+// Define macros for setting the timer prescaller
 #define TIMER_PRESCALE_1024 ((1<<CS00) | (1<<CS02))
 #define TIMER_PRESCALE_256 (1<<CS02)
 
+// Variables to store current speed
 volatile unsigned int leftSpeed = 0;
 volatile unsigned int rightSpeed = 0;
 
 int timerState = 0;
 
 ISR(TIMER0_OVF_vect){
-	// Stop and reset the Timer
+	// Stop and reset the Timer to zero
 	TCCR0B &= ~((1<<CS00) | (1<<CS01) | (1<<CS02));
 	TCNT0 = 0;
 
+	// Variable to store the new prescaller value
 	int prescaler = 0;
 
 	// Switch Timer State
-	if (timerState != 0){
+	if (timerState != 0){ // Generate Control Pulse on Motor Pins
 		// Set OCR0x
 		OCR0B = leftSpeed;
 		OCR0A = rightSpeed;
@@ -30,7 +33,8 @@ ISR(TIMER0_OVF_vect){
 
 		// Set Pins to High
 		PORTD |= (1<<PD5) | (1<<PD6);
-	} else {
+
+	} else { // Generate Hold-off on Motor Pins
 		// Set Pins to Low
 		PORTD &= ~((1<<PD5) | (1<<PD6));
 
@@ -44,11 +48,11 @@ ISR(TIMER0_OVF_vect){
 		timerState = 1;
 	}
 
-	// Enable Timer
+	// Enable Timer and set to the correct prescaller
 	TCCR0B |= prescaler;
 
 	#ifdef DEBUG_MOTOR_TIMING
-		// Report Motor Speeds
+		// Report Motor Speeds via serial
 		char buff[64];
 		sprintf(buff, "Prescaler: %d\n",
 			TCCR0B);
@@ -56,9 +60,12 @@ ISR(TIMER0_OVF_vect){
 	#endif
 }
 
+// ISR to set pin low on Compare match -> Right Motor
 ISR(TIMER0_COMPA_vect){
 	PORTD &= ~(1<<PD6);
 }
+
+// ISR to set pin low on compare match -> Left Motor
 ISR(TIMER0_COMPB_vect){
 	PORTD &= ~(1<<PD5);
 }
