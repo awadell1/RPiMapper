@@ -197,12 +197,54 @@
 							<h2>Results</h2>
 						</div>
 						<div class="yui-u">
+							<div class="image123">
+								<div class="imgContainer">
+									<img src="images/exampleOccMapResult.png" alt="Occupancy Map generated using stationary RPiMapper" height=240px/>
+									<p class="caption">Generated Occupancy Grid</p>
+							</div>
+								<div class="imgContainer">
+									<img src="images/exampleOccMap.jpg" alt="Occupancy Map generated using stationary RPiMapper" height=240px/>
+									<p class="caption">Environment being Mapped</p>
+								</div>
+							</div>
 							<p>
-								<h3>Environmental Mapping</h3>
-								
-								<p class="caption">Test</p>
+								Stationary mapping of a static environment produces believable results as shown in the figure above, thus confirming that sonar measurements are being streamed correctly streamed to Host computer.
+								However, dynamic mapping of a static environment produces a significantly less believable map as shown below.
+							</p>
+							<div class="image123">
+								<div class="imgContainer">
+									<img src="images/dynamicMap.png" alt="Occupancy Map generated using stationary RPiMapper" height=240px/>
+									<p class="caption">Occupancy Grid generated while moving</p>
+							</div>
+								<div class="imgContainer">
+									<iframe src="https://drive.google.com/file/d/1cvC3-_-B8pj2gr2lCoRe4f8TQsZtwdl58w/preview" width="320" height="240"></iframe>
+									<p class="caption">Environment being Mapped</p>
+								</div>
+							</div>
+							<p>
+								In the above generated image odometry was not used, rather the robot was assumed to move forwards at a constant velocity and thus odometry errors cannot be blamed for the resulting map. The next most likely culprit is cross-talk between sonar sensors. As all sonar are fired for a given sensor, the return signal is not guaranteed to originate from the sensor being listen too. That is the echo heard by a given sonar sensor could have originated at any sonar, and thus represent a reflection from a near by object.
+							</p>
+						</div>
+					</div><!--// Your section has ended -->
 
-							</p> <!--// Put Content here -->
+					<div class="yui-gf"> <!--// Future Work -->
+						<div class="yui-u first">
+							<h2>Future Work</h2>
+						</div>
+						<div class="yui-u">
+							<h3>Odometry Measurements</h3>
+							<p>
+								Using the wheel spokes as a wheel encoder limits the resolution of the wheel encoder to approximately 1cm, which when combined with multiple pulses for each spoke results generally poor system for localization.
+								This could be improved upon significantly by using a higher resolution quadrature encoder which would give both a more precise measurement of wheel rotation and directly measure the direction of rotation. However, most commercial wheel encoders are both expensive and not plug and play for a given motor package and thus would push the limits of the project's $100 budget. However, this could pay significant dividends by enabling accurate localization via dead reckoning.
+							</p>
+							<h3>Sonar Crosstalk</h3>
+							<p>
+								The sonar sensors used in the project separated the trigger line from the echo line, while this initially seemed to be a desirable feature as it allowed all sonars to be triggered using a single pin. Testing suggests the cross-talk between sonar sensors is a significant issue in the current configuration. Unfortunately, the Arduino Nano does not have enough I/O pins to support 8 sonars if the trigger and echo pins are wired separately for each sonar. The <a href="https://hackaday.io/project/19950-hc-sr04-i2c-octopus-octosonar">Octosonar</a> project has achieved be able to implement a similar project by multiplexing the echo pins to a single I/O Pin. Future iterations may wish to take a similar direction.
+							</p>
+							<h3>Communications Protocol</h3>
+							<p>
+								Data is currently transmitted over I2C and the web socket in plain text, while this makes for an easy to debug protocol, it also wastes a lot of bandwidth. Sending data in a binary format could significantly reduce the protocol's overhead and further reduce communication latency. While latency does not appear to be a major issue with the current system, any latency will negatively impact the ability of the host computer to control the robot.
+							</p>
 						</div>
 					</div><!--// Your section has ended -->
 					

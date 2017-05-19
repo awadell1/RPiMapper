@@ -116,4 +116,9 @@ img.eq {
 	font-size: 110%;
 	line-height: 18px;
 	text-align:center;
+	padding-bottom: 0.5em;
+}
+
+.imgContainer{
+    float:left;
 }
