@@ -130,3 +130,11 @@ img.eq {
 .imgContainer{
     float:left;
 }
+
+p.cite {
+	font-size: 110%;
+	line-height: 18px;
+	padding: 0em;
+	text-indent: 0em;
+	padding-bottom: 6pt;
+}

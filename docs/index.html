@@ -146,9 +146,7 @@
 							</p>
 							<img src="images/eq_sonarDist_raw.svg" alt="Equation for computing sonar distance measurements" class="eqBig"/>
 							<img src="images/eq_sonarDist_final.svg" alt="Equation for computing sonar distance measurements" class="eq"/>
-
 							
-
 							<h3>Odometry Measurements</h3>
 							<p>
 								In order to accurately map an environment the position of the robot must be know or the problem becomes <a href="https://en.wikipedia.org/wiki/Simultaneous_localization_and_mapping">simultaneous localization and mapping (SLAM)</a>, which is significantly harder than occupancy grid mapping. Rather than tackle the problem of SLAM or the development of an external motion capture system, localization using dead reckoning is assumed to be sufficient. While this is a tenuous assumption, it allows the scope of the project to be significantly reduced. 
@@ -160,7 +158,11 @@
 							<p>
 								The issue of the sensor state rapidly switching between high and low, was partially solved by adding a low pass filter to the output of the IR sensor. Using a 10K&#8486; resistor and 10&#xb5;F capacitor, giving the filter a characteristic time of 0.1s. While this did improve the situation, as shown oscilloscope trace above, the issues was not fully negated. Additionally as shown in the video below, the issue is a combination of higher frequency jitter (the dark bands in the upper oscilloscope trace) as well as a lower frequency "double tap" on multiple wheel spokes as shown in the video below.
 							</p>
-							<iframe src="https://drive.google.com/file/d/1D6puRlwcJ4UW1fkgk5X7CiW6Asnw_nzYaQ/preview" width="320" height="240"></iframe>
+							<div style='text-align: center; margin: 0 auto'>
+								<object type='application/x-shockwave-flash' style='width:320px; height:240px;' data='https://www.youtube.com/v/6j1hHqnjd3M'>
+									<param name='movie' value='https://www.youtube.com/v/6j1hHqnjd3M' />
+								</object>
+							</div>
 							<p>
 								The spoke counts for the left and right wheel are detected using Atmega328p's INT0 and INT1 pin change interrupts to detect both the rising and falling edges of the signal so as to maximize the resolution of the measurements. The spoke counts are incremented based on the current desired wheel speeds to differentiate between forwards and backwards motion. Upon recieving a request for odometry measurements from the RPi3 (Packet command "O"), the counts for the left and right wheel are transmitted over I2C and then reset to zero to prevent double counting. The RPi3 then uses the following formula to convert the odometry counts into distance traveled and angle rotated odometry measurement before forwarding the information along the Host computer.
 							</p>
@@ -218,7 +220,11 @@
 									<p class="caption">Occupancy Grid generated while moving</p>
 							</div>
 								<div class="imgContainer">
-									<iframe src="https://drive.google.com/file/d/1cvC3-_-B8pj2gr2lCoRe4f8TQsZtwdl58w/preview" width="320" height="240"></iframe>
+									<div style='text-align: center; margin: 0 auto'>
+										<object type='application/x-shockwave-flash' style='width:320px; height:240px;' data='https://www.youtube.com/v/cj_4GN0eipI'>
+											<param name='movie' value='https://www.youtube.com/v/cj_4GN0eipI' />
+										</object>
+									</div>
 									<p class="caption">Environment being Mapped</p>
 								</div>
 							</div>
@@ -245,6 +251,13 @@
 							<h3>Communications Protocol</h3>
 							<p>
 								Data is currently transmitted over I2C and the web socket in plain text, while this makes for an easy to debug protocol, it also wastes a lot of bandwidth. Sending data in a binary format could significantly reduce the protocol's overhead and further reduce communication latency. While latency does not appear to be a major issue with the current system, any latency will negatively impact the ability of the host computer to control the robot.
+							</p>
+							<h3>IMU Measurements</h3>
+							<p>
+								A <a href="http://sfe.io/p13944">SparkFun 9DOF Sensor Stick</a> has been attached to the I2C and is currently visible to the RPi3. However, I was unable to establish communications with the device via the RPi3. A library exist for both the <a href="https://github.com/sparkfun/SparkFun_LSM9DS1_Arduino_Library">Arduino</a> and the <a href="https://github.com/akimach/LSM9DS1_RaspberryPi_Library">RPi</a>, that should be able to provide an interface for communicating with the sensor. However, the Arduino library didn't play nice with the current Arduino code due to conflicting timer definition. Additional errors appear to have been caused by the Arduino being configured as a slave device, while the Sensor Stick library expect the Arduino to be a master device on the I2C bus.
+							</p>
+							<p>
+								The RPi version of the library should enable straight for communication with the Sensor Stick via a c class. However, I was unable to correctly compile the library and integrate it into the code. Future work should focus on compiling the library and integrating it into the code base. Once the Host machine has access to the IMU measurements, focus can shit to using a Kalman filter to integrate sensor input from odometry and the IMU to better estimate the current pose of the robot.
 							</p>
 						</div>
 					</div><!--// Your section has ended -->
@@ -362,6 +375,31 @@
 							<p>
 								This project would not have been possible without the help, guidance of Professor Skovira and Brendon Jackson. I would also like to thank the numerous class peers who guided me as I learned C, I2C and web sockets and helped me through Segmentation Faults and late nights.
 							</p>
+						</div>
+					</div> <!--// Your section has ended -->
+
+					<div class="yui-gf"> <!--// References -->
+						<div class="yui-u first">
+							<h2>References</h2>
+						</div>
+						<div class="yui-u">
+							<p class="cite"> bq, “Arduino Nano Pinout,” 19-Aug-2014. [Online]. Available: <a href="http://www.pighixxx.com/test/wp-content/uploads/2014/11/nano.png">http://www.pighixxx.com/test/wp-content/uploads/2014/11/nano.png</a>.</p>
+							<p class="cite">Atmel, “ATMEL 8-BIT MICROCONTROLLER WITH 4/8/16/32KBYTES IN-SYSTEM PROGRAMMABLE FLASH DATASHEET.” Nov-2015. </p>
+							<p class="cite">“beagleoncreate.” [Online]. Available: <a href="https://code.google.com/archive/p/beagleoncreate/">https://code.google.com/archive/p/beagleoncreate/</a>.</p>
+							<p class="cite">eLinux, “Interfacing with I2C Devices - eLinux.org.” [Online]. Available: <a href="http://elinux.org/Interfacing_with_I2C_Devices">http://elinux.org/Interfacing_with_I2C_Devices</a>.</p>
+							<p class="cite">“Linux Documentation.” [Online]. Available: <a href="https://linux.die.net/">https://linux.die.net/</a>.</p>
+							<p class="cite">Sascha Nitsch Unternehmensberatung, “Linux Howtos: C/C++ -> Sockets Tutorial.” [Online]. Available: <a href="http://www.linuxhowtos.org/C_C++/socket.htm">http://www.linuxhowtos.org/C_C++/socket.htm</a>.</p>
+							<p class="cite">Michael Kerrisk, “Linux man pages online.” [Online]. Available: <a href="http://man7.org/linux/man-pages/index.html">http://man7.org/linux/man-pages/index.html</a>.</p>
+							<p class="cite">Sebastian Thrun, Wolfram Burgard, and Dieter Fox, Probabilistic Robotics. Available: <a href="http://www.probabilistic-robotics.org/">http://www.probabilistic-robotics.org/</a>.</p>
+							<p class="cite">Gordon Henderson, “WiringPi.”  Available: <a href="http://wiringpi.com/">http://wiringpi.com/</a></p>
+							<p class="cite">Parallax Inc, "PING))) Ultrasonic Distance Sensor," 4-Feb-2013. [Online]. Available <a href="https://www.parallax.com/sites/default/files/downloads/28015-PING-Sensor-Product-Guide-v2.0.pdf">https://www.parallax.com/sites/default/files/downloads/28015-PING-Sensor-Product-Guide-v2.0.pdf</a>.</p>
+							<p class="cite">Elec Freaks, "Ultrasonic Ranging Module HC - SR04". [online]. Available: <a href="https://cdn.sparkfun.com/datasheets/Sensors/Proximity/HCSR04.pdf">https://cdn.sparkfun.com/datasheets/Sensors/Proximity/HCSR04.pdf</a>.</p>
+							<p class="cite">SparkFun, "9DoF Sensor Stick Hookup Guide," [Online]. Available: <a href="http://sfe.io/t542">http://sfe.io/t542</a>.</p>
+							<p class="cite">SparkFun, "Bi-Directional Logic Level Converter Hookup Guide," [Online]. Available: <a href="http://sfe.io/t147">http://sfe.io/t147</a>.</p>
+							<p class="cite">SparkFun, "SparkFun LSM9DS1 Arduino Library," [Online]. Available: <a href="https://github.com/sparkfun/SparkFun_LSM9DS1_Arduino_Library">https://github.com/sparkfun/SparkFun_LSM9DS1_Arduino_Library</a>.</p>
+							<p class="cite">Akimasa KIMURA, "SparkFun LSM9DS1 RaspberryPI Library," [Online]. Available: <a href="https://github.com/akimach/LSM9DS1_RaspberryPi_Library">https://github.com/akimach/LSM9DS1_RaspberryPi_Library</a>.</p>
+							<p class="cite">Tom Preston-Werner, "GitHub Ribbons," [Online]. Available: <a href="https://github.com/blog/273-github-ribbons">https://github.com/blog/273-github-ribbons</a>.</p>						
+
 						</div>
 					</div> <!--// Your section has ended -->
 
