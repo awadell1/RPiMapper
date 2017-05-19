@@ -41,14 +41,14 @@
 
 // Define Wheel Parameters
 #define WHEEL_SPEED_FACTOR 178
-#define WHEEL_DIAMETER 0.0762
+#define WHEEL_DIAMETER 0.0665
 #define WHEEL_NSPOKE 8
-#define WHEEl_2_CENTER 0.07366
-#define ENCODER_PER_PULSE ((WHEEL_DIAMETER/WHEEL_NSPOKE) * PI)
+#define WHEEl_TRACK (0.07366*2)
+#define ENCODER_PER_PULSE (PI*WHEEL_DIAMETER)/(2*WHEEL_NSPOKE)
 
 // Sonar Measurements calculations
 #define NUM_SONAR 8
-#define SONAR_TOF 0.00022
+#define SONAR_TOF 0.000276485625
 #define SONAR_MAX_RANGE 3
 
 // Global variables
@@ -82,9 +82,9 @@ int main(int argc, char *argv[])
 {
 	// Setup Signal Handler
 	signal(SIGINT, sighandler);
-        signal(SIGTERM, sighandler);
-        signal(SIGHUP, sighandler);
-        signal(SIGQUIT, sighandler);
+		signal(SIGTERM, sighandler);
+		signal(SIGHUP, sighandler);
+		signal(SIGQUIT, sighandler);
 
 	// Setup I2C Connection to Arduino
 	if (openI2C() != 1) {return -1;}
@@ -133,10 +133,10 @@ int main(int argc, char *argv[])
 
 			// Check for Exit Flag
 			if(msgStatus < 0){
-                          errorCount++;
-                        } else {
-                          errorCount = 0;
-                        }
+						  errorCount++;
+						} else {
+						  errorCount = 0;
+						}
 		}
 
 		// Check for too many errors
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Close the connection
-        shutdownComms();
+		shutdownComms();
 
 	return 0;
 }
@@ -201,19 +201,19 @@ int processMsg(char sendBuff[], const char* msg) {
 	if (strncmp(msg, SET_WHEEL_SPEED, 3) == 0) {
 		// Set the wheel speeds
 		char motorState[I2C_MSG_SIZE];
-	        
-                // Convert To Motor Commands
-                double speed [2];
-                str2double(speed, msg+3, 2);
+			
+				// Convert To Motor Commands
+				double speed [2];
+				str2double(speed, msg+3, 2);
 
-                // Convert to speed comands
-                double speedCmd[2] = {0};
-                for(int i = 0; i < 2; i++){
-                    speedCmd[i] = WHEEL_SPEED_FACTOR * speed[i] / (WHEEL_DIAMETER * PI); 
-                    
-                    // Check for Max Speed
-                    if (speedCmd[i] > 99) speedCmd[i] = 99;
-                }
+				// Convert to speed comands
+				double speedCmd[2] = {0};
+				for(int i = 0; i < 2; i++){
+					speedCmd[i] = WHEEL_SPEED_FACTOR * speed[i] / (WHEEL_DIAMETER * PI); 
+					
+					// Check for Max Speed
+					if (speedCmd[i] > 99) speedCmd[i] = 99;
+				}
 
 		// Create Message for Arduino
 		char cmd[I2C_MSG_SIZE];
@@ -231,13 +231,13 @@ int processMsg(char sendBuff[], const char* msg) {
 		// Request Odmetry Readings from Arduino
 		char odometryData[I2C_MSG_SIZE];
 		printf("Requesting Odometry\n");
-                int dataSize = pollArduino(odometryData, "O", I2C_MSG_SIZE);
+				int dataSize = pollArduino(odometryData, "O", I2C_MSG_SIZE);
 		
 		// Check Read was successful
 		if(dataSize <= 0){
-                    printf("ERROR: No Odometry Data Returned\n");
-                    return -1;
-                }
+					printf("ERROR: No Odometry Data Returned\n");
+					return -1;
+				}
 
 		// Convert to double
 		double wheelTravel[2] = {0};
@@ -246,7 +246,7 @@ int processMsg(char sendBuff[], const char* msg) {
 		// Convert Clicks to Fwd Distance and Angular Rotation
 		double FwdDist, AngTurn;
 		FwdDist = ENCODER_PER_PULSE * (wheelTravel[0] + wheelTravel[1])/2;
-		AngTurn = ENCODER_PER_PULSE * (wheelTravel[0] - wheelTravel[1])/ (WHEEl_2_CENTER*2*PI);
+		AngTurn = ENCODER_PER_PULSE * (wheelTravel[1] - wheelTravel[0])/ (PI*WHEEl_TRACK);
 
 		// Report Odometry to Computer
 		sprintf(sendBuff + strlen(sendBuff), "%.3f %.3f ", FwdDist, AngTurn);
@@ -258,7 +258,7 @@ int processMsg(char sendBuff[], const char* msg) {
 		char sonarData[I2C_MSG_SIZE];
 		char cmd[I2C_MSG_SIZE];
 		double sonar = 0;
-                for(int i = 0; i < NUM_SONAR; i++){
+				for(int i = 0; i < NUM_SONAR; i++){
 			// Construct Command to get Sonar Reading
 			sprintf(cmd, "s%d", i);
 
@@ -266,31 +266,30 @@ int processMsg(char sendBuff[], const char* msg) {
 			int dataSize = pollArduino(sonarData, cmd, I2C_MSG_SIZE);
 
 			// Compute Sonar Measurement
-                        sonar = strtod(sonarData, NULL)* SONAR_TOF;
+			sonar = strtod(sonarData, NULL)* SONAR_TOF;
 
 			// Append to sendBuff
 			if (sonar < SONAR_MAX_RANGE){
-                            sprintf(sendBuff + strlen(sendBuff), "%.3f ", sonar);
-		        } else{
-                            sprintf(sendBuff + strlen(sendBuff), "NaN ");
-                        }
-                }
+				sprintf(sendBuff + strlen(sendBuff), "%.3f ", sonar);
+			} else{
+				sprintf(sendBuff + strlen(sendBuff), "NaN ");
+			}
 		status = 1;
 
 	} else if (strncmp(msg, GET_IMU_READING, 3) == 0) {
 		// Report Failue
-                sprintf(sendBuff, "ERROR IMU NOT CONNECTED");
+				sprintf(sendBuff, "ERROR IMU NOT CONNECTED");
 		status = 1;
 
 	} else if (strncmp(msg, SHUTDOWN_COMMS, 3) == 0) {
 		// Shutdown comms
-                sprintf(sendBuff, "Shutting down comms");
+				sprintf(sendBuff, "Shutting down comms");
 		status = -1;
 
 	} else {
 		// Echo message
 		sprintf(sendBuff, "UNKNOWN COMMAND: [%s]", msg);
-                status = 1;
+				status = 1;
 	}
 
 	// Check that response is not too long
@@ -301,7 +300,7 @@ int processMsg(char sendBuff[], const char* msg) {
 
 	// Copy response into send buffer
 	//strncpy(sendBuff+startIndex, resp, respLen);
-        printf("%s\n", sendBuff);
+		printf("%s\n", sendBuff);
 
 	return status;
 }
@@ -350,11 +349,11 @@ int openI2C(){
 }
 
 void sighandler(int signum){
-    // Close comms
-    shutdownComms();	
+	// Close comms
+	shutdownComms();	
 	
-    // Exit
-    exit(-1);    
+	// Exit
+	exit(-1);    
 }
 
 void str2double(double* num, const char str[], const int nNum){

@@ -132,7 +132,7 @@
 							<h2>Design: Sensor Measurements</h2> <!--// put your heading here -->
 						</div>
 						<div class="yui-u">
-							<img src="images/sonarCad.png" title="Sonar Array Mount" alt="Laser Cut Sonar Mount" style="width:80%"/>
+							<img src="images/sonarCad.png" title="Sonar Array Mount" alt="Laser Cut Sonar Mount" style="width:80%" class="center"/>
 							<h3>Ultrasonic Range Sensor Array</h3>
 							<p>
 								The sonar array consists of 8 Ultrasonic <a href="http://sfe.io/p13959">HC-SR04</a> sensors held in a circle via a custom laser cut mount. Each sonar takes in 2 signals (Trigger and Echo) and power and returns measured distance as the duration of a pulse on the Echo line. All sonars are triggered by a 10 us pulse generated on pin PD4 every 30ms. However, only a single sonar pulse is listen for at a time, as detecting multiple sonars at once creates issues when multiple sonars arrive close together. While this reduces the update rate of the sonar array from 33 Hz to 4.2 Hz, the gains in accuracy more than make up for it. The duration of each pulse is detected using enabling a Pin Change interrupt on the sonar pin of interest using <tt>PCMSK0</tt>, <tt>PCMSK1</tt> or <tt>PCMSK2</tt> based on the specif port of the sonar pin. While ideally all sonars would be place on a single I/O port of the atmega328p, however due to special functions pins this was not possible.
@@ -140,6 +140,14 @@
 							<p>
 								Rather than store the actual distance measurement in meters, the only the timer duration of the pulse is stored in an <tt>volatile unsigned long</tt> array containing the latest completed sonar measurement of each sonar. Essentially, sonar reading are stored in a rolling buffer so that at any point in time the Arduino is ready to return a reading for any sonar sensor.
 							</p>
+							<img src="images/img_sonarReading.JPG" alt="Sample Sonar Measurement Set" width=80%/>
+							<p>
+								Sonar measurements are requested by the RPi one at a time due to the limited I2C buffer size. Using the command "sX" where "X" is the index of the sonar (0-7). Once the sonar measurement has arrived at the RPi, it is converted from a timer duration to a distance measurement using the following formula. Which given the atmega328p's clock speed of 16Mhz, a TIMER0's 64 prescaler and the speed of sound (340.29 m/s) reduces to a constant multiplied by a the timer value. Additionally, sonar measurements greater than the max range of the sonar (3m) are replaced with "NaN".
+							</p>
+							<img src="images/eq_sonarDist_raw.svg" alt="Equation for computing sonar distance measurements" class="eqBig"/>
+							<img src="images/eq_sonarDist_final.svg" alt="Equation for computing sonar distance measurements" class="eq"/>
+
+							
 
 							<h3>Odometry Measurements</h3>
 							<p>
@@ -148,9 +156,28 @@
 							<p>
 								Odometry Measurements are taken by detecting the spokes of the drive wheel using a <a href="https://www.pololu.com/product/1132">Pololu IR range finder based on Sharp's GP2Y0D805Z0F sensor</a>. However, with only 8 spokes odometry can only detect wheel travel on the order of 1cm, and can only estimate direction based on the desired wheel speed. Further the detection of each spoke often cycles between high and low multiple times for a single spoke at low speeds. As a results the odometry system as a whole performs poorly at low wheel speeds.
 							</p>
+							<img src="images/odometry_lowpass.JPG" alt="Top: Odometry signal without low-pass filter Bottom: 0.1s low-pass filter added" width=80%/>
 							<p>
-								The issue of the sensor state rapidly switching between high and low, was partially solved by adding a low pass filter to the output of the IR sensor. Using a 10K&#8486; resistor and 10&#xb5;F capacitor
+								The issue of the sensor state rapidly switching between high and low, was partially solved by adding a low pass filter to the output of the IR sensor. Using a 10K&#8486; resistor and 10&#xb5;F capacitor, giving the filter a characteristic time of 0.1s. While this did improve the situation, as shown oscilloscope trace above, the issues was not fully negated. Additionally as shown in the video below, the issue is a combination of higher frequency jitter (the dark bands in the upper oscilloscope trace) as well as a lower frequency "double tap" on multiple wheel spokes as shown in the video below.
 							</p>
+							<iframe src="https://drive.google.com/file/d/1D6puRlwcJ4UW1fkgk5X7CiW6Asnw_nzYaQ/preview" width="320" height="240"></iframe>
+							<p>
+								The spoke counts for the left and right wheel are detected using Atmega328p's INT0 and INT1 pin change interrupts to detect both the rising and falling edges of the signal so as to maximize the resolution of the measurements. The spoke counts are incremented based on the current desired wheel speeds to differentiate between forwards and backwards motion. Upon recieving a request for odometry measurements from the RPi3 (Packet command "O"), the counts for the left and right wheel are transmitted over I2C and then reset to zero to prevent double counting. The RPi3 then uses the following formula to convert the odometry counts into distance traveled and angle rotated odometry measurement before forwarding the information along the Host computer.
+							</p>
+							<img src="images/eq_dist_traveled.svg" alt="Equation for computing distance traveled from encounder counts" class="eqBig"/>
+							<img src="images/eq_angle_turned.svg" alt="Equation for computing angle turned from encounder counts" class="eqBig"/>
+
+						</div>
+					</div><!--// Your section has ended -->
+
+					<div class="yui-gf"> <!--// Code Appendix -->
+						<div class="yui-u first">
+							<h2>Design: Motor Control </h2>
+						</div>
+						<div class="yui-u">
+							<p>
+								The RPiMapper is driven using two <a href="https://www.parallax.com/product/900-00008">Parallax continuous rotation servos</a> controlled using the <tt>OCR0A</tt> and <tt>OCR0B</tt>
+							</p> <!--// Put Content here -->
 						</div>
 					</div><!--// Your section has ended -->
 					

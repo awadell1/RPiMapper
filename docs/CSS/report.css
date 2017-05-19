@@ -90,6 +90,24 @@ p.enlarge span { color: #000 }
 .tg .tg-s6z2{text-align:center}
 
 img {
-    display: block;
-    margin: auto;
+	display: block;
+	margin: 0.5em auto;
+}
+iframe {
+	display: block;
+	margin: 0.5em auto;
+}
+
+img.eqBig {
+	height: 24pt;
+	margin: auto;
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+img.eq {
+	height: 12pt;
+	margin: auto;
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
 }
