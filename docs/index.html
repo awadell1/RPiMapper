@@ -1,6 +1,5 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="https://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 	<title>ECE 5990 | RPiMapper </title>
 	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
@@ -10,13 +9,15 @@
 	<link rel="stylesheet" type="text/css" href="CSS/yahoo.css" media="all" />
 	<link rel="stylesheet" type="text/css" href="CSS/report.css" media="all" />
 	<link rel="stylesheet" href="CSS/project.css" type="text/css" media="screen, projection" />
-	<link rel="stylesheet" href="highlight/styles/default.css">
-	<script src="highlight/highlight.pack.js"></script>
-	<script>hljs.initHighlightingOnLoad();</script>
+	<link rel="stylesheet" href="highlight/styles/default.css" />
+	<script src="highlight/highlight.pack.js" type="text/javascript"></script>
+	<script type="text/javascript">hljs.initHighlightingOnLoad();</script>
 </head>
 <body>
 
-<a href="https://github.com/awadell1/RPiMapper"><img style="position: absolute; top: 0; right: 0; border: 0;" src="images/forkMe.png" alt="Fork me on GitHub" data-canonical-src="images/forkMe2.png"></a>
+<pre>
+	<a href="https://github.com/awadell1/RPiMapper"><img style="position: absolute; top: 0; right: 0; border: 0;" src="images/forkMe.png" alt="Fork me on GitHub"/></a>
+</pre>
 
 <div id="doc2" class="yui-t7">
 	<div id="inner">
@@ -33,109 +34,105 @@
 		<div id="bd"> <!--// Main Body begins here -->
 			<div id="yui-main">
 				<div class="yui-b">
-						<div class="yui-gf"> <!--// This is a section -->
-							<div class="yui-u first">
-								<h2>Introduction</h2> <!--// put your heading here -->
-							</div>
-							<div class="yui-u">
-								<p>
-									The RPiMapper consists of computer systems working together: the Arduino Nano, RPi3 and the Host computer. Their division of labor works to play to the strengths of each system, the Arduino generates the timing pulse required to control the motors, and precisely measures the sonar pulse width. The RPi3 then communicates with the Arduino using I2C and relays measurements over a web-socket to the host computer. To prevent timing issues on the Arduino, RPi3 receives raw measurements from the Arduino, which it then converts into SI units before sending the data along to the host computer. Similarly wheel speeds are given by the Host in m/s are converted into a percentage of max wheel speed before sending to the Arduino. Finally, the Host Computer uses a MATLAB script to update the occupancy grid based on the current sensor readings and estimated pose, and presents a GUI for setting the robot's forward and angular velocity. 
-								</p> <!--// Put Content here -->
+					<div class="yui-gf"> <!--// Introduction -->
+						<div class="yui-u first">
+							<h2>Introduction</h2> <!--// put your heading here -->
+						</div>
+						<div class="yui-u">
+							<p>
+								The RPiMapper consists of computer systems working together: the Arduino Nano, RPi3 and the Host computer. Their division of labor works to play to the strengths of each system, the Arduino generates the timing pulse required to control the motors, and precisely measures the sonar pulse width. The RPi3 then communicates with the Arduino using I2C and relays measurements over a web-socket to the host computer. To prevent timing issues on the Arduino, RPi3 receives raw measurements from the Arduino, which it then converts into SI units before sending the data along to the host computer. Similarly wheel speeds are given by the Host in m/s are converted into a percentage of max wheel speed before sending to the Arduino. Finally, the Host Computer uses a MATLAB script to update the occupancy grid based on the current sensor readings and estimated pose, and presents a GUI for setting the robot's forward and angular velocity. 
+							</p> <!--// Put Content here -->
 
-								<p><center>
-									<img src="images/robotSpin.gif" title="The RPiMapper" alt="The RPiMapper" width="236" height="357"/>
-								</center></p>
-							</div>
-						</div><!--// Your section has ended -->
+							<img src="images/robotSpin.gif" title="The RPiMapper" alt="The RPiMapper" style="width: 40%" />
+						</div>
+					</div><!--// Your section has ended -->
 
-						<div class="yui-gf"> <!--// This is another section -->
-							<div class="yui-u first">
-								<h2>Objective</h2> <!--// put your heading here -->
-							</div>
-							<div class="yui-u">
-								<p>
-									The purpose of the RPiMapper was build a mobile robotics platform for mapping an environment using an array of ultrasonic sensors. Mapping is done using an occupancy grid method based on the algorithm detailed in <a href="http://www.probabilistic-robotics.org/">Probabilistic Robotics</a>. By using a 360 degree array of 8 sonars sensors updated at 4Hz, the RPiMapper is designed to be able to quickly map an environment. Localization while mapping was done by tracking the rotation of the wheel spokes with limited success and future iterations should focus on improving localization.
-								</p> <!--// Put Content here -->
-							</div>
-						</div><!--// Your section has ended -->
+					<div class="yui-gf"> <!--// Objective -->
+						<div class="yui-u first">
+							<h2>Objective</h2> <!--// put your heading here -->
+						</div>
+						<div class="yui-u">
+							<p>
+								The purpose of the RPiMapper was build a mobile robotics platform for mapping an environment using an array of ultrasonic sensors. Mapping is done using an occupancy grid method based on the algorithm detailed in <a href="http://www.probabilistic-robotics.org/">Probabilistic Robotics</a>. By using a 360 degree array of 8 sonars sensors updated at 4Hz, the RPiMapper is designed to be able to quickly map an environment. Localization while mapping was done by tracking the rotation of the wheel spokes with limited success and future iterations should focus on improving localization.
+							</p> <!--// Put Content here -->
+						</div>
+					</div><!--// Your section has ended -->
 
-						<div class="yui-gf"> <!--// This is a section -->
-							<div class="yui-u first">
-								<h2>Design: Overview</h2> <!--// put your heading here -->
-							</div>
-							<div class="yui-u">
-								<p>
-									The development of the RPiMapper focused primarily on setting up communications, taking sensor measurements and controlling the motors. Mapping was handled using code written for MAE 5180: Autonomous Mobile Robots by Alex with slight modifications. By reusing this old code rather than reimplemented in on the Raspberry Pi, the scope of the project was reduced, and the resulting system is mostly compatible with the <a href="https://code.google.com/archive/p/beagleoncreate/">beagleoncreate</a> system used by MAE 5180.
-								</p> <!--// Put Content here -->
-							</div>
-						</div><!--// Your section has ended -->
+					<div class="yui-gf"> <!--// Design Overview -->
+						<div class="yui-u first">
+							<h2>Design: Overview</h2> <!--// put your heading here -->
+						</div>
+						<div class="yui-u">
+							<p>
+								The development of the RPiMapper focused primarily on setting up communications, taking sensor measurements and controlling the motors. Mapping was handled using code written for MAE 5180: Autonomous Mobile Robots by Alex with slight modifications. By reusing this old code rather than reimplemented in on the Raspberry Pi, the scope of the project was reduced, and the resulting system is mostly compatible with the <a href="https://code.google.com/archive/p/beagleoncreate/">beagleoncreate</a> system used by MAE 5180.
+							</p> <!--// Put Content here -->
+						</div>
+					</div><!--// Your section has ended -->
 
-						<div class="yui-gf"> <!--// This is a section -->
-							<div class="yui-u first">
-								<h2>Design: Communications</h2> <!--// put your heading here -->
-							</div>
-							<div class="yui-u">
-								<h3>Web Socket</h3> <!--// put your heading here -->
-								<p>
-									Communication via the Host computer and RPi3 is done using an TCP/IP web socket implemented in C on the RPi side and MATLAB on the Host computer side. A communications protocol was implemented on top of the web-socket connection for sending along commands and receiving data. The initial protocol attempted to typecast the data to send into a <tt>char</tt> array and then unpack the data at the other end. This protocol was ultimately dropped for being difficult impossible to debug and it's general complexity.
-								</p> <!--// Put Content here -->
-								<p>
-									Instead each packet consists of a 1026 <tt>char</tt> array contain the data to be sent in plain text using separate packet formats for sending and receiving data. The 1026 buffer size is significantly larger than required and faster data rates could be achieved by reducing the packet or by allowing for arbitrary packet lengths. However, as transmission speeds were sufficiently fast for our purposes, this was not pursued.
-								</p>
-								<table class="tg">
-									<tr>
-										<th class="tg-s6z2">Packet Type</th>
-										<th class="tg-s6z2">Fomart</th>
-										<th class="tg-s6z2">Example</th>
-									</tr>
-									<tr>
-										<td class="tg-031e">Host -&gt; RPi</td>
-										<td class="tg-031e">CMD DATA</td>
-										<td class="tg-031e">SMV 1.10 1.10</td>
-									</tr>
-									<tr>
-										<td class="tg-031e">RPI -&gt; Host</td>
-										<td class="tg-031e">TIMESTAMP Data</td>
-										<td class="tg-031e">10 Success</td>
-									</tr>
-								</table>
-								<p>
-									Essentially, the protocol works by sending the RPi3 a 3 letter command followed by any additional information required by the request. For example "GRM" would be used to tell the RPi3 to return the current sonar measurements while "SWV 1.1 1.1" is used to tell the RPi3 to set both wheels to have a ground speed of 1.1 m/s.
-								</p>
-								<p>
-									Once the RPi3 has received a command it then performs the desired action and returns a response packet to the Host computer. The response packet consists of the number of seconds that the web socket has been open followed by the requested data. The time stamp is currently used only for debugging purpose, but was intended to allow for communication latency to be corrected for by the host computer.
-								</p>
+					<div class="yui-gf"> <!--// Design Communications -->
+						<div class="yui-u first">
+							<h2>Design: Communications</h2> <!--// put your heading here -->
+						</div>
+						<div class="yui-u">
+							<h3>Web Socket</h3> <!--// put your heading here -->
+							<p>
+								Communication via the Host computer and RPi3 is done using an TCP/IP web socket implemented in C on the RPi side and MATLAB on the Host computer side. A communications protocol was implemented on top of the web-socket connection for sending along commands and receiving data. The initial protocol attempted to typecast the data to send into a <tt>char</tt> array and then unpack the data at the other end. This protocol was ultimately dropped for being difficult impossible to debug and it's general complexity.
+							</p> <!--// Put Content here -->
+							<p>
+								Instead each packet consists of a 1026 <tt>char</tt> array contain the data to be sent in plain text using separate packet formats for sending and receiving data. The 1026 buffer size is significantly larger than required and faster data rates could be achieved by reducing the packet or by allowing for arbitrary packet lengths. However, as transmission speeds were sufficiently fast for our purposes, this was not pursued.
+							</p>
+							<table class="tg">
+								<tr>
+									<th class="tg-s6z2">Packet Type</th>
+									<th class="tg-s6z2">Fomart</th>
+									<th class="tg-s6z2">Example</th>
+								</tr>
+								<tr>
+									<td class="tg-031e">Host -&gt; RPi</td>
+									<td class="tg-031e">CMD DATA</td>
+									<td class="tg-031e">SMV 1.10 1.10</td>
+								</tr>
+								<tr>
+									<td class="tg-031e">RPI -&gt; Host</td>
+									<td class="tg-031e">TIMESTAMP Data</td>
+									<td class="tg-031e">10 Success</td>
+								</tr>
+							</table>
+							<p>
+								Essentially, the protocol works by sending the RPi3 a 3 letter command followed by any additional information required by the request. For example "GRM" would be used to tell the RPi3 to return the current sonar measurements while "SWV 1.1 1.1" is used to tell the RPi3 to set both wheels to have a ground speed of 1.1 m/s.
+							</p>
+							<p>
+								Once the RPi3 has received a command it then performs the desired action and returns a response packet to the Host computer. The response packet consists of the number of seconds that the web socket has been open followed by the requested data. The time stamp is currently used only for debugging purpose, but was intended to allow for communication latency to be corrected for by the host computer.
+							</p>
 
-								<h3>I2C Communications</h3>
-								<p>
-									Setting up communications between the RPi3 and the Arduino was surprising one of the most difficult component of the project. Specifically getting data to be sent from the Arduino to the RPi, took longer than expected partially due to using <tt>wiringPII2C</tt> and partially due to a lack of familiarity with the I2C protocol. I had initially assumed that I2C would allow me to write data to the Arduino, and then have the Arduino immediately write data directly back to the RPi. This turned out to entirely untrue as I2C is only half-duplex and while I had been trying to treat it like a full-duplex protocol.
-								</p>
-								<p>
-									The solution to this was simply to have the Arduino write it's response to the RPi3 to a buffer to then send that buffer once the RPi3 attempted to read data from the Arduino. Overall this was a really simple fix, but it took me a quite a long time to realize the error that I had made.
-								</p>
-								<p>
-									The source of difficult was my decision to the the <a href="http://wiringpi.com/">wiringPi</a> library for I2C communication on the RPi. In addition to a lack of solid documentation, the library restricts you to reading a fixed number of bytes from the device at a time. As a result the data to be sent to the Pi would have to be dribbled in 1 character at a time, with both the RPi and Arduino having to keep track of which character should be sent.
-								</p>
-								<p>
-									Conversely, using the built in Linux commands <tt>open</tt>, <tt>read</tt> and <tt>write</tt> can handle sending multiple bytes at a time, have through documentation, and were a breeze to setup by following an <a href="http://elinux.org/Interfacing_with_I2C_Devices"> eLinux Tutorial</a>. The switch from <tt>wiringPi</tt> to treating the I2C bus as a file, took less than 30 minutes (Compared to the hours spent messing around with <tt>wiringPi</tt>).
-								</p>
-								<p>
-									Once two-way communications had been set up, a protocol was again created for transmitting data between the RPi and Arduino. Again, the initial protocol was planned to send data by typecasting into a <tt>char</tt> array. However, due to the difficulty of debugging a stream of binary data, this protocol was abandoned for sending data along as character array. Messages sent to the Arduino, consisted of a single command character followed by the required data. For example, "W 100 100" would set both wheels to 100 speed forward. Response consisted of solely of the response message. In both cases the messages are terminated using the new line character.
-								</p>
-								<p>
-									As the I2C buffer for the Arduino is limited to 32 bytes, the entire set of sonar measurements can not be sent all at once. Instead, the RPi will sequentially request each sonars measurement. In order to reduce communication delays, sonar measurements are taken constantly and stored until the next sonar reading is ready. Thus the Arduino will always return the most recent sonar measurement, and will give duplicate readings if polled at a rate faster than measurements are taken.	
-								</p>
-							</div>
-						</div><!--// Your section has ended -->
+							<h3>I2C Communications</h3>
+							<p>
+								Setting up communications between the RPi3 and the Arduino was surprising one of the most difficult component of the project. Specifically getting data to be sent from the Arduino to the RPi, took longer than expected partially due to using <tt>wiringPII2C</tt> and partially due to a lack of familiarity with the I2C protocol. I had initially assumed that I2C would allow me to write data to the Arduino, and then have the Arduino immediately write data directly back to the RPi. This turned out to entirely untrue as I2C is only half-duplex and while I had been trying to treat it like a full-duplex protocol.
+							</p>
+							<p>
+								The solution to this was simply to have the Arduino write it's response to the RPi3 to a buffer to then send that buffer once the RPi3 attempted to read data from the Arduino. Overall this was a really simple fix, but it took me a quite a long time to realize the error that I had made.
+							</p>
+							<p>
+								The source of difficult was my decision to the the <a href="http://wiringpi.com/">wiringPi</a> library for I2C communication on the RPi. In addition to a lack of solid documentation, the library restricts you to reading a fixed number of bytes from the device at a time. As a result the data to be sent to the Pi would have to be dribbled in 1 character at a time, with both the RPi and Arduino having to keep track of which character should be sent.
+							</p>
+							<p>
+								Conversely, using the built in Linux commands <tt>open</tt>, <tt>read</tt> and <tt>write</tt> can handle sending multiple bytes at a time, have through documentation, and were a breeze to setup by following an <a href="http://elinux.org/Interfacing_with_I2C_Devices"> eLinux Tutorial</a>. The switch from <tt>wiringPi</tt> to treating the I2C bus as a file, took less than 30 minutes (Compared to the hours spent messing around with <tt>wiringPi</tt>).
+							</p>
+							<p>
+								Once two-way communications had been set up, a protocol was again created for transmitting data between the RPi and Arduino. Again, the initial protocol was planned to send data by typecasting into a <tt>char</tt> array. However, due to the difficulty of debugging a stream of binary data, this protocol was abandoned for sending data along as character array. Messages sent to the Arduino, consisted of a single command character followed by the required data. For example, "W 100 100" would set both wheels to 100 speed forward. Response consisted of solely of the response message. In both cases the messages are terminated using the new line character.
+							</p>
+							<p>
+								As the I2C buffer for the Arduino is limited to 32 bytes, the entire set of sonar measurements can not be sent all at once. Instead, the RPi will sequentially request each sonars measurement. In order to reduce communication delays, sonar measurements are taken constantly and stored until the next sonar reading is ready. Thus the Arduino will always return the most recent sonar measurement, and will give duplicate readings if polled at a rate faster than measurements are taken.	
+							</p>
+						</div>
+					</div><!--// Your section has ended -->
 
-						<div class="yui-gf"> <!--// This is a section -->
-							<div class="yui-u first">
-								<h2>Design: Sensor Measurements</h2> <!--// put your heading here -->
-							</div>
-							<div class="yui-u">
-							<p><center>
-								<img src="images/sonarCad.png" title="Sonar Array Mount" alt="Laser Cut Sonar Mount" width="500"/>
-							</center></p>
+					<div class="yui-gf"> <!--// Design Sensor Measurements -->
+						<div class="yui-u first">
+							<h2>Design: Sensor Measurements</h2> <!--// put your heading here -->
+						</div>
+						<div class="yui-u">
+							<img src="images/sonarCad.png" title="Sonar Array Mount" alt="Laser Cut Sonar Mount" style="width:80%"/>
 							<h3>Ultrasonic Range Sensor Array</h3>
 							<p>
 								The sonar array consists of 8 Ultrasonic <a href="http://sfe.io/p13959">HC-SR04</a> sensors held in a circle via a custom laser cut mount. Each sonar takes in 2 signals (Trigger and Echo) and power and returns measured distance as the duration of a pulse on the Echo line. All sonars are triggered by a 10 us pulse generated on pin PD4 every 30ms. However, only a single sonar pulse is listen for at a time, as detecting multiple sonars at once creates issues when multiple sonars arrive close together. While this reduces the update rate of the sonar array from 33 Hz to 4.2 Hz, the gains in accuracy more than make up for it. The duration of each pulse is detected using enabling a Pin Change interrupt on the sonar pin of interest using <tt>PCMSK0</tt>, <tt>PCMSK1</tt> or <tt>PCMSK2</tt> based on the specif port of the sonar pin. While ideally all sonars would be place on a single I/O port of the atmega328p, however due to special functions pins this was not possible.
@@ -152,25 +149,23 @@
 								Odometry Measurements are taken by detecting the spokes of the drive wheel using a <a href="https://www.pololu.com/product/1132">Pololu IR range finder based on Sharp's GP2Y0D805Z0F sensor</a>. However, with only 8 spokes odometry can only detect wheel travel on the order of 1cm, and can only estimate direction based on the desired wheel speed. Further the detection of each spoke often cycles between high and low multiple times for a single spoke at low speeds. As a results the odometry system as a whole performs poorly at low wheel speeds.
 							</p>
 							<p>
-								The issue of the sensor state rapidly switching between high and low, was partially solved by adding a low pass filter to the output of the IR sensor. Using a 10K&#8486; resistor and 10&&#xb5;F capacitor
+								The issue of the sensor state rapidly switching between high and low, was partially solved by adding a low pass filter to the output of the IR sensor. Using a 10K&#8486; resistor and 10&#xb5;F capacitor
 							</p>
-
-							</div>
-						</div><!--// Your section has ended -->
-						
-					<div class="yui-gf">
+						</div>
+					</div><!--// Your section has ended -->
+					
+					<div class="yui-gf"> <!--// Code Appendix -->
 						<div class="yui-u first">
 							<h2>Code Appendix</h2>
 						</div>
-							<div class="yui-u">
-								<p>
-									Check out the <a href="https://github.com/awadell1/RPiMapper">RPiMapper's git repository</a> for the full code base and instructions on how to get started with RPiMapper.
-								</p> <!--// Put Content here -->
-							</div>
+						<div class="yui-u">
+							<p>
+								Check out the <a href="https://github.com/awadell1/RPiMapper">RPiMapper's git repository</a> for the full code base and instructions on how to get started with RPiMapper.
+							</p> <!--// Put Content here -->
 						</div>
-					</div>
+					</div><!--// Your section has ended -->
 
-					<div class="yui-gf">
+					<div class="yui-gf"> <!--// Acknowledgments -->
 						<div class="yui-u first">
 							<h2>Acknowledgments</h2>
 						</div>
@@ -179,10 +174,9 @@
 								This project would not have been possible without the help, guidance of Professor Skovira and Brendon Jackson. I would also like to thank the numerous class peers who guided me as I learned C, I2C and web sockets and helped me through Segmentation Faults and late nights.
 							</p>
 						</div>
-					</div>
-					</div>
+					</div> <!--// Your section has ended -->
 
-					<div class="yui-gf">
+					<div class="yui-gf"> <!--// Contacts -->
 						<div class="yui-u first">
 							<h2>Contact</h2>
 						</div>
@@ -191,14 +185,13 @@
 								Alexius Wadell: alw224
 							</p>
 						</div>
-					</div>
-					</div>
+					</div> <!--// Your section has ended -->
 
 				</div><!--// .yui-b -->
 			</div><!--// yui-main -->
 		</div><!--// bd -->
 
-		<div id="ft">
+		<div id="ft"> <!--// Footer -->
 			Created by Alexius Wadell (alw224) 2017
 		</div><!--// footer -->
 

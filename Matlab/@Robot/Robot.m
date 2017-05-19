@@ -39,7 +39,7 @@ classdef Robot < handle
 					0.75*pi];
 		sonar_std = 0.05;						% Measurement Noise of the sonar [m]
 		sonar_random = 0.04;					% Probability of a random measurement
-		sonar_beamWidth = deg2rad(45);			% Sonar Beam Angles [rad]
+		sonar_beamWidth = deg2rad(30);			% Sonar Beam Angles [rad]
 
 		% Values greater than 1, widen sensor stdev given to particle filter
 		% Values less than 1, shrink the stdev given to particle filter
