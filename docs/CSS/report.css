@@ -89,6 +89,14 @@ p.enlarge span { color: #000 }
 .tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:#ccc;color:#333;background-color:#f0f0f0;}
 .tg .tg-s6z2{text-align:center}
 
+.tg2  {border-collapse:collapse;border-spacing:0;border-color:#ccc;margin:0px auto;}
+.tg2 td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:#ccc;color:#333;background-color:#fff;border-top-width:1px;border-bottom-width:1px;}
+.tg2 th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:#ccc;color:#333;background-color:#f0f0f0;border-top-width:1px;border-bottom-width:1px;}
+.tg2 .tg-baqh{text-align:center;vertical-align:top}
+.tg2 .tg-yw4l{vertical-align:top}
+.tg2 .tg-b7b8{background-color:#f9f9f9;vertical-align:top}
+.tg2 .tg-dzk6{background-color:#f9f9f9;text-align:center;vertical-align:top}
+
 img {
 	display: block;
 	margin: 0.5em auto;
