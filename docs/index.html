@@ -142,7 +142,7 @@
 							</p>
 							<img src="images/img_sonarReading.JPG" alt="Sample Sonar Measurement Set" width=80%/>
 							<p>
-								Sonar measurements are requested by the RPi one at a time due to the limited I2C buffer size. Using the command "sX" where "X" is the index of the sonar (0-7). Once the sonar measurement has arrived at the RPi, it is converted from a timer duration to a distance measurement using the following formula. Which given the atmega328p's clock speed of 16Mhz, a TIMER0's 64 prescaler and the speed of sound (340.29 m/s) reduces to a constant multiplied by a the timer value. Additionally, sonar measurements greater than the max range of the sonar (3m) are replaced with "NaN".
+								Sonar measurements are requested by the RPi one at a time due to the limited I2C buffer size. Using the command "sX" where "X" is the index of the sonar (0-7). Once the sonar measurement has arrived at the RPi, it is converted from a timer duration to a distance measurement using the following formula. Which given the atmega328p's clock speed of 16Mhz, a TIMER1's 64 prescaler and the speed of sound (340.29 m/s) reduces to a constant multiplied by a the timer value. Additionally, sonar measurements greater than the max range of the sonar (3m) are replaced with "NaN".
 							</p>
 							<img src="images/eq_sonarDist_raw.svg" alt="Equation for computing sonar distance measurements" class="eqBig"/>
 							<img src="images/eq_sonarDist_final.svg" alt="Equation for computing sonar distance measurements" class="eq"/>
@@ -170,13 +170,38 @@
 						</div>
 					</div><!--// Your section has ended -->
 
-					<div class="yui-gf"> <!--// Code Appendix -->
+					<div class="yui-gf"> <!--// Design Motor Control -->
 						<div class="yui-u first">
 							<h2>Design: Motor Control </h2>
 						</div>
 						<div class="yui-u">
 							<p>
-								The RPiMapper is driven using two <a href="https://www.parallax.com/product/900-00008">Parallax continuous rotation servos</a> controlled using the <tt>OCR0A</tt> and <tt>OCR0B</tt>
+								The RPiMapper is driven using two <a href="https://www.parallax.com/product/900-00008">Parallax continuous rotation servos</a> controlled using the Atmega328p's 8bit TIMER0. Per Parallax's documentation for the motor, the motor is control by suppling a 1.3-1.7ms pulse every 20ms to the control line. In order to improve the resolution of motor speed control, the timer's prescaler switches between 64x during the control pulse and 1024x during the 20ms hold off, allowing for a total of 27 theoretical motor speeds.
+							</p>
+							<p>
+								The robot's motion is specified by the Host control program in terms of a forwards and angular velocity about the robot center, which is then converted into a left and right wheel speeds using the following equation:
+							</p>
+							<img src="images/eq_fwdVelAngVel.svg" alt="Equation for Wheel Ground Speeds from desired Forward and Angular Velocity" class="eqBig"/>
+							<p>
+								The robot wheel speeds are then sent to the RPi using the "SWV LS RS" command. Where LS/RS gives the ground speed of the left and right wheels respectively. The RPi3 the converts the desired ground speed into a percent motor speed command using the equation below. This equation assumes that the angular velocity of the wheel speeds is linearly related to the percent wheel speed by a factor (Wheel Speed Factor). While this is a decent first pass approximation, it over estimates the wheel speed at low throttle and underestimates at higher wheel speeds. 
+							</p>
+							<img src="images/eq_MotorSpeed.svg" alt="Equation for Motor Speed from Ground Speed" class="eqBig"/>
+							<p>
+								Once the percent motor throttle has been computed, it is transfered to the Arduino via I2C and the wheel speeds are updated for the next command pulse. The motor <tt>OCR0x</tt> value is then computed using the equation below. Where the Tick Factor gives the change in the pulse duration (In timer ticks) per percent wheel speed (0.125 ticks/%), and the 1.5ms Timer is he timer count the gives a 1.5ms pulse (93.5 ticks).
+							</p>
+							<img src="images/eq_MotorTicks.svg" alt="Equation for Motor Speed from Ground Speed" class="eq"/>
+						</div>
+					</div><!--// Your section has ended -->
+					<div class="yui-gf"> <!--// Results -->
+						<div class="yui-u first">
+							<h2>Results</h2>
+						</div>
+						<div class="yui-u">
+							<p>
+								<h3>Environmental Mapping</h3>
+								
+								<p class="caption">Test</p>
+
 							</p> <!--// Put Content here -->
 						</div>
 					</div><!--// Your section has ended -->

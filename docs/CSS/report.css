@@ -111,3 +111,9 @@ img.eq {
 	margin-top: 0.5em;
 	margin-bottom: 0.5em;
 }
+
+.caption {
+	font-size: 110%;
+	line-height: 18px;
+	text-align:center;
+}
