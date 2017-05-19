@@ -30,7 +30,7 @@ body { font-family: 'Electrolize', 'Calibri', sans-serif; color: #444; }
 #hd h1 { font-size: 36px; text-transform: uppercase; letter-spacing: 3px; }
 h1, h2, h3, h4	{ font-family: 'Changa One', 'Calibri', sans-serif; color: #333;}
 h2 	{ font-size: 152%; }
-h3, h4 { font-size: 122%; padding-top: 1em;}
+h3, h4 { font-size: 122%; padding-top: 1em; font-weight: bold;}
 p { font-size: 110%; line-height: 18px; padding-right: 3em; text-indent: 2em;}
 a { color: #333 }
 a:hover { font-style: underline;}
