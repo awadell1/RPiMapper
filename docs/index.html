@@ -112,16 +112,16 @@
 								The solution to this was to have the Arduino buffer it's response after receiving a request from the RPi. The buffered response was then delivered when the RPi attempted to read from the Arduino. Overall this was a really simple fix, but it took me a quite a long time to realize the error that I had made.
 							</p>
 							<p>
-								The other source of difficult was my initial decision to use the <a href="http://wiringpi.com/">wiringPi</a> library for I2C communication on the RPi. In addition to a lack of solid documentation, the library restricts you to reading a fixed number of bytes from the device at a time. As a result, the data to be sent to the Pi would have to be dribbled in 1 character at a time, with both the RPi and Arduino having to keep track of which character should be sent.
+								The other source of difficult was my initial decision to use the <a href="http://wiringpi.com/">wiringPi</a> library for I2C communication on the RPi. In addition to a lack of solid documentation, the library restricts you to reading a fixed number of bytes from the device at a time. As a result, the data to be sent to the Pi would have to be transmitted 1 character at a time, with both the RPi and Arduino having to keep track of which character was being sent.
 							</p>
 							<p>
-								Conversely, using the built-in Linux commands <tt>open</tt>, <tt>read</tt> and <tt>write</tt> can handle sending multiple bytes at a time, have through documentation, and were a breeze to setup by following an <a href="http://elinux.org/Interfacing_with_I2C_Devices"> eLinux Tutorial</a>. The switch from <tt>wiringPi</tt> to treating the I2C bus as a file took less than 30 minutes (Compared to the hours spent messing around with <tt>wiringPi</tt>).
+								Conversely, the built-in Linux commands <tt>open</tt>, <tt>read</tt> and <tt>write</tt> can handle sending multiple bytes at a time, have thorough documentation, and were a breeze to setup by following an <a href="http://elinux.org/Interfacing_with_I2C_Devices"> eLinux Tutorial</a>. The switch from <tt>wiringPi</tt> to treating the I2C bus as a file took less than 30 minutes.
 							</p>
 							<p>
-								Once two-way communications had been set up, a protocol was again created for transmitting data between the RPi and Arduino. Again, the initial protocol was planned to send data by typecasting into a <tt>char</tt> array. However, due to the difficulty of debugging a stream of binary data, this protocol was abandoned for sending data along as character array. Messages sent to the Arduino, consisted of a single command character followed by the required data. For example, "W 100 100" would set both wheels to 100 speed forward. Response consisted of solely of the response message. In both cases, the messages are terminated using the new line character.
+								Once two-way communications had been set-up, a protocol was again created for transmitting data between the RPi and Arduino. Again, the initial protocol was to send data by typecasting into a <tt>char</tt> array. However, due to the difficulty of debugging a stream of binary data, this protocol was abandoned in favor of sending data along as a character array. Messages sent to the Arduino consisted of a single command character followed by the required data. For example, "W 100 100" would set both wheels to 100 speed forward. Responses consisted solely of the requested data. In both cases, the messages were terminated using the new line character.
 							</p>
 							<p>
-								As the I2C buffer for the Arduino is limited to 32 bytes, the entire set of sonar measurements can not be sent all at once. Instead, the RPi will sequentially request each sonars measurement. In order to reduce communication delays, sonar measurements are taken constantly and stored until the next sonar reading is ready. Thus the Arduino will always return the most recent sonar measurement and will give duplicate readings if polled at a rate faster than measurements are taken.	
+								As the I2C buffer for the Arduino is limited to 32 bytes, the entire set of sonar measurements can not be sent all at once. Instead, the RPi will sequentially request each sonars measurement. In order to reduce communication delays, sonar measurements are taken constantly and stored until the next sonar reading is ready. Thus, the Arduino will always return the most recent sonar measurement and will give duplicate readings if polled at a rate faster than measurements are taken.	
 							</p>
 						</div>
 					</div><!--// Your section has ended -->
@@ -134,28 +134,28 @@
 							<img src="images/sonarCad.png" title="Sonar Array Mount" alt="Laser Cut Sonar Mount" width="80%" class="center"/>
 							<h3>Ultrasonic Range Sensor Array</h3>
 							<p>
-								The sonar array consists of 8 Ultrasonic <a href="http://sfe.io/p13959">HC-SR04</a> sensors held in a circle via a custom laser cut mount. Each sonar takes in 2 signals (Trigger and Echo) and power and returns measured distance as the duration of a pulse on the Echo line. All sonars are triggered by a 10 us pulse generated on pin PD4 every 30ms. However, only a single sonar echo is listened for at a time, as detecting multiple sonars at once creates issues when multiple sonars arrive close together. While this reduces the update rate of the sonar array from 33 Hz to 4.2 Hz, the gains in accuracy more than makeup for it. The duration of each pulse is detected using enabling a Pin Change interrupt, on the sonar pin of interest using <tt>PCMSK0</tt>, <tt>PCMSK1</tt> or <tt>PCMSK2</tt> depending on the specific port of the sonar pin. Ideally, all sonars would be placed on a single I/O port of the atmega328p, however due to special functions pins this was not possible.
+								The sonar array consists of 8 Ultrasonic <a href="http://sfe.io/p13959">HC-SR04</a> sensors held in a circle via a custom laser cut mount. Each sonar takes in 2 signals (Trigger and Echo) and power. They then return the measured distance as the duration of a pulse on the Echo line. All sonars are triggered by a 10 us pulse generated on pin PD4 every 30ms. However, only a single sonar echo pulse is listened for at a time, as detecting multiple sonars at once creates issues when multiple sonars arrive close together. While this reduces the update rate of the sonar array from 33 Hz to 4.2 Hz, the gains in accuracy more than makeup for it. The duration of each pulse is detected by enabling a Pin Change interrupt, on the sonar pin of interest using <tt>PCMSK0</tt>, <tt>PCMSK1</tt> or <tt>PCMSK2</tt>. This based on the specific I/O port of the sonar pin. While ideally all sonars would be placed on a single I/O port of the atmega328p, due to special function pins, this was not possible.
 							</p>
 							<p>
-								Rather than store the actual distance measurement in meters, the only the timer duration of the pulse is stored in a <tt>volatile unsigned long</tt> array containing the latest completed sonar measurement of each sonar. Essentially, sonar readings are stored in a rolling buffer so that the Arduino is always ready to return a reading for any sonar sensor.
+								Rather than store the actual distance measurement in meters, only the sonar echo pulse width is stored in a <tt>volatile unsigned long</tt> array containing the latest completed sonar measurement of each sonar. Essentially, sonar readings are stored in a rolling buffer so that the Arduino is always ready to return a reading for any sonar sensor.
 							</p>
 							<img src="images/img_sonarReading.JPG" alt="Sample Sonar Measurement Set" width="80%"/>
 							<p>
-								The RPo requests sonar measurements one at a time due to the limited I2C buffer size (32 <tt>char</tt> max). New readings are requested using the command "sX" where "X" is the index of the sonar (0-7). Sonar measurements are then converted from a timer duration to a distance measurement using the following formula by the RPi. Which given the atmega328p's clock speed of 16Mhz, a TIMER1's 64 prescaler and the speed of sound (340.29 m/s) reduces to a constant multiplied by the echo pulse width in ticks. Additionally, sonar measurements greater than the max range of the sonar (3m) are replaced with "NaN".
+								The RPi requests sonar measurements one at a time due to the limited I2C buffer size (32 <tt>char</tt> max). New readings are requested by RPi using the command "sX", where "X" is the index of the sonar (0-7). Sonar measurements are then converted from a timer duration to a distance measurement using the formula presented below, given the atmega328p's clock speed of 16Mhz, a TIMER1's 64 prescaler and the speed of sound (340.29 m/s) reduces to a constant multiplied by the echo pulse width in ticks. Additionally, sonar measurements greater than the max range of the sonar (3m) are replaced with "NaN".
 							</p>
 							<img src="images/eq_sonarDist_raw.svg" alt="Equation for computing sonar distance measurements" class="eqBig"/>
 							<img src="images/eq_sonarDist_final.svg" alt="Equation for computing sonar distance measurements" class="eq"/>
 							
 							<h3>Odometry Measurements</h3>
 							<p>
-								For the scope of this project, I assumed that pose (Position and orientation) of the robot is known precisely using odometry. While this is not precisely true, the assumption allowed me to avoid the problem of <a href="https://en.wikipedia.org/wiki/Simultaneous_localization_and_mapping">simultaneous localization and mapping (SLAM)</a>, which is significantly harder than occupancy grid mapping.  Rather than tackle SLAM or the development of an external motion capture system, localization using dead reckoning was assumed to be sufficient for the purposes of this project.
+								For the scope of this project, I assumed that pose (Position and orientation) of the robot is known precisely using odometry. While this is not precisely true, the assumption allowed me to avoid the problem of <a href="https://en.wikipedia.org/wiki/Simultaneous_localization_and_mapping">simultaneous localization and mapping (SLAM)</a>, which is significantly harder than occupancy grid mapping. Rather than tackling SLAM or the development of an external motion capture system, localization using dead reckoning was assumed to be sufficient for the purposes of this project.
 							</p>
 							<p>
-								Odometry Measurements are taken by detecting the spokes of the drive wheel using a <a href="https://www.pololu.com/product/1132">Pololu IR range finder based on Sharp's GP2Y0D805Z0F sensor</a>. However, with only 8 spokes odometry can only detect wheel travel on the order of 1cm, and can only estimate direction based on the desired wheel speed. Further the detection of each spoke often cycles between high and low multiple times for a single spoke at low speeds. As a results the odometry system as a whole performs poorly at low wheel speeds.
+								Odometry Measurements are taken by detecting the spokes of the drive wheel using a <a href="https://www.pololu.com/product/1132">Pololu IR range finder based on Sharp's GP2Y0D805Z0F sensor</a>. However, with only 8 spokes, odometry can only detect wheel travel on the order of 1cm and can only estimate direction based on the desired wheel speed. Furthermore, the detection of each spoke often cycles between high and low multiple times for a single spoke at low speeds. As a result, the odometry system, as a whole, performs poorly at low wheel speeds.
 							</p>
 							<img src="images/odometry_lowpass.JPG" alt="Top: Odometry signal without low-pass filter Bottom: 0.1s low-pass filter added" width="80%"/>
 							<p>
-								The issue of the sensor state rapidly switching between high and low, was partially solved by adding a low pass filter to the output of the IR sensor. Using a 10K&#8486; resistor and 10&#xb5;F capacitor, giving the filter a characteristic time of 0.1s. While this did improve the situation, as shown oscilloscope trace above, the issues was not fully negated. Additionally as shown in the video below, the issue is a combination of higher frequency jitter (the dark bands in the upper oscilloscope trace) as well as a lower frequency "double tap" on multiple wheel spokes as shown in the video below.
+								The issue of the sensor state rapidly switching between high and low was partially solved by adding a low pass filter with a characteristic time of 0.1s to the output of the IR sensor. While this did improve the situation, as shown by the oscilloscope trace above, the issues was not fully negated. Additionally as shown in the video below, the issue was a combination of higher frequency jitter (the dark bands in the upper oscilloscope trace) as well as a lower frequency "double tap" on multiple wheel spokes.
 							</p>
 							<div style='text-align: center; margin: 0 auto'>
 								<object type='application/x-shockwave-flash' style='width:320px; height:240px;' data='https://www.youtube.com/v/6j1hHqnjd3M'>
@@ -163,7 +163,7 @@
 								</object>
 							</div>
 							<p>
-								The spoke counts for the left and right wheel are detected using Atmega328p's INT0 and INT1 pin change interrupts to detect both the rising and falling edges of the signal so as to maximize the resolution of the measurements. The spoke counts are incremented based on the current desired wheel speeds to differentiate between forwards and backwards motion. Upon receiving a request for odometry measurements from the RPi3 (Packet command "O"), the counts for the left and right wheel are transmitted over I2C and then reset to zero to prevent double counting. The RPi3 then uses the following formula to convert the odometry counts into distance traveled and angle rotated odometry measurement before forwarding the information along the Host computer.
+								The spoke counts for the left and right wheel are detected using the atmega328p's INT0 and INT1 pin change interrupts. BOth the rising and falling edges of the signal are detected so as to maximize the resolution of the measurements. The spoke counts are incremented based on the current desired wheel speeds to differentiate between forwards and backwards motion. Upon receiving a request for odometry measurements from the RPi3 (Packet command "O"), the counts for the left and right wheels are transmitted over I2C and then reset to zero to prevent double counting. The RPi3 then uses the following formula to convert the encoder wheel counts into distance traveled and angle rotated odometry measurements before forwarding the information along the Host computer.
 							</p>
 							<img src="images/eq_dist_traveled.svg" alt="Equation for computing distance traveled from encounder counts" class="eqBig"/>
 							<img src="images/eq_angle_turned.svg" alt="Equation for computing angle turned from encounder counts" class="eqBig"/>
@@ -177,18 +177,18 @@
 						</div>
 						<div class="yui-u">
 							<p>
-								The RPiMapper is driven using two <a href="https://www.parallax.com/product/900-00008">Parallax continuous rotation servos</a> controlled using the Atmega328p's 8bit TIMER0. Per Parallax's documentation for the motor, the motor is control by suppling a 1.3-1.7ms pulse every 20ms to the control line. In order to improve the resolution of motor speed control, the timer's prescaler switches between 256x during the control pulse and 1024x during the 20ms hold off, allowing for a total of 27 theoretical motor speeds.
+								The RPiMapper is driven using two <a href="https://www.parallax.com/product/900-00008">Parallax continuous rotation servos</a> controlled by the atmega328p's 8bit TIMER0. Per the Parallax's documentation for the servo, the servo is controlled by supplying a 1.3-1.7ms pulse every 20ms to the control line. In order to improve the resolution of motor speed control, the timer's prescaler switches between 256x during the control pulse and 1024x during the 20ms hold off, allowing for a total of 27 theoretical motor speeds.
 							</p>
 							<p>
-								The robot's motion is specified by the Host control program in terms of a forwards and angular velocity about the robot center, which is then converted into a left and right wheel speeds using the following equation:
+								The robot's motion is specified by the Host control program in terms of a forwards and angular velocity, which is then converted into left and right wheel ground speeds using the following equation:
 							</p>
 							<img src="images/eq_fwdVelAngVel.svg" alt="Equation for Wheel Ground Speeds from desired Forward and Angular Velocity" class="eqBig"/>
 							<p>
-								The robot wheel speeds are then sent to the RPi using the "SWV LS RS" command. Where LS/RS gives the ground speed of the left and right wheels respectively. The RPi3 the converts the desired ground speed into a percent motor speed command using the equation below. This equation assumes that the angular velocity of the wheel speeds is linearly related to the percent wheel speed by a factor (Wheel Speed Factor). While this is a decent first pass approximation, it over estimates the wheel speed at low throttle and underestimates at higher wheel speeds. 
+								The robot wheel ground speeds are then sent to the RPi using the "SWV LS RS" command, where "Ls RS" gives the ground speed of the left and right wheels respectively. The RPi3 then converts the desired ground speed into a percent motor speed command using the equation below. This equation assumes that the angular velocity of the wheel speeds is linearly related to the percent wheel speed by a factor (Wheel Speed Factor). While this is a decent first pass approximation, it overestimates the wheel speed at low wheel speeds and underestimates it at higher wheel speeds. 
 							</p>
 							<img src="images/eq_MotorSpeed.svg" alt="Equation for Motor Speed from Ground Speed" class="eqBig"/>
 							<p>
-								Once the percent motor throttle has been computed, it is transfered to the Arduino via I2C and the wheel speeds are updated for the next command pulse. The motor <tt>OCR0x</tt> value is then computed using the equation below. Where the Tick Factor gives the change in the pulse duration (In timer ticks) per percent wheel speed (0.125 ticks/%), and the 1.5ms Timer is he timer count the gives a 1.5ms pulse (93.5 ticks).
+								Once the percent motor throttle has been computed, it is transfered to the Arduino via I2C and the wheel speeds are updated for the next command pulse. The motor <tt>OCR0x</tt> value is then computed using the equation below, where the Tick Factor gives the change in the pulse duration (in timer ticks) per percent wheel speed (0.125 ticks/%) and the 1.5ms timer is the timer count that gives a 1.5ms pulse (93.5 ticks).
 							</p>
 							<img src="images/eq_MotorTicks.svg" alt="Equation for Motor Speed from Ground Speed" class="eq"/>
 						</div>
@@ -210,7 +210,7 @@
 								</div>
 							</div>
 							<p>
-								Stationary mapping of a static environment produces believable results as shown in the figure above, thus confirming that sonar measurements are being streamed correctly streamed to Host computer.
+								Stationary mapping of a static environment produces believable results as shown in the figure above. This confirms that sonar measurements are being streamed correctly to the Host computer.
 								However, dynamic mapping of a static environment produces a significantly less believable map as shown below.
 							</p>
 							<div class="image123">
@@ -228,7 +228,7 @@
 								</div>
 							</div>
 							<p>
-								In the above generated image odometry was not used, rather the robot was assumed to move forwards at a constant velocity and thus odometry errors cannot be blamed for the resulting map. The next most likely culprit is cross-talk between sonar sensors. As all sonar are fired for a given sensor, the return signal is not guaranteed to originate from the sensor being listen too. That is the echo heard by a given sonar sensor could have originated at any sonar, and thus represent a reflection from a near by object.
+								In the above generated image, odometry was not used. Rather, in this image, the robot was assumed to move forwards at a constant velocity and, thus, odometry errors cannot be blamed for the resulting map. The next most likely culprit is cross-talk between sonar sensors. As all sonars are fired together, the return signal is not guaranteed to originate from the sensor of interest. The echo heard by a given sonar sensor could have originated at any sonar and, thus, could represent a reflection from a nearby object.
 							</p>
 						</div>
 					</div><!--// Your section has ended -->
@@ -240,23 +240,23 @@
 						<div class="yui-u">
 							<h3>Odometry Measurements</h3>
 							<p>
-								Using the wheel spokes as a wheel encoder limits the resolution of the wheel encoder to approximately 1cm, which when combined with multiple pulses for each spoke results generally poor system for localization.
-								This could be improved upon significantly by using a higher resolution quadrature encoder which would give both a more precise measurement of wheel rotation and directly measure the direction of rotation. However, most commercial wheel encoders are both expensive and not plug and play for a given motor package and thus would push the limits of the project's $100 budget. However, this could pay significant dividends by enabling accurate localization via dead reckoning.
+								Using the wheel spokes as a wheel encoder limits the resolution of the wheel encoder to approximately 1cm, which when combined with multiple pulses for each spoke results in a generally poor system for localization.
+								This could be significantly improved upon by using a higher resolution quadrature encoder which would give both a more precise measurement of wheel rotation and which would directly measure the direction of rotation. However, most commercial wheel encoders are both expensive and not plug and play for a given motor package and, thus, would push the limits of the project's $100 budget. However, this could pay significant dividends by enabling accurate localization via dead reckoning.
 							</p>
 							<h3>Sonar Crosstalk</h3>
 							<p>
-								The sonar sensors used in the project separated the trigger line from the echo line, while this initially seemed to be a desirable feature as it allowed all sonars to be triggered using a single pin. Testing suggests the cross-talk between sonar sensors is a significant issue in the current configuration. Unfortunately, the Arduino Nano does not have enough I/O pins to support 8 sonars if the trigger and echo pins are wired separately for each sonar. The <a href="https://hackaday.io/project/19950-hc-sr04-i2c-octopus-octosonar">Octosonar</a> project has achieved be able to implement a similar project by multiplexing the echo pins to a single I/O Pin. Future iterations may wish to take a similar direction.
+								The sonar sensors used in the project separated the trigger line from the echo line. While this initially seemed to be a desirable feature, as it allowed all sonars to be triggered using a single pin, testing suggests that cross-talk between sonar sensors is a significant issue in the current configuration. Unfortunately, the Arduino Nano does not have enough I/O pins to support 8 sonars if the trigger and echo pins are wired separately for each sensor. The <a href="https://hackaday.io/project/19950-hc-sr04-i2c-octopus-octosonar">Octosonar</a> project has been able to implement a similar function by multiplexing the echo pins to a single I/O Pin. Future iterations may wish to take a similar direction.
 							</p>
 							<h3>Communications Protocol</h3>
 							<p>
-								Data is currently transmitted over I2C and the web socket in plain text, while this makes for an easy to debug protocol, it also wastes a lot of bandwidth. Sending data in a binary format could significantly reduce the protocol's overhead and further reduce communication latency. While latency does not appear to be a major issue with the current system, any latency will negatively impact the ability of the host computer to control the robot.
+								Data is currently transmitted over I2C and the web socket in plain text. While this makes for an easy to debug protocol, it also wastes a lot of bandwidth. Sending data in a binary format could significantly reduce the protocol's overhead and further reduce communication latency. While latency does not appear to be a major issue with the current system, any latency will negatively impact the ability of the host computer to control the robot.
 							</p>
 							<h3>IMU Measurements</h3>
 							<p>
-								A <a href="http://sfe.io/p13944">SparkFun 9DOF Sensor Stick</a> has been attached to the I2C and is currently visible to the RPi3. However, I was unable to establish communications with the device via the RPi3. A library exist for both the <a href="https://github.com/sparkfun/SparkFun_LSM9DS1_Arduino_Library">Arduino</a> and the <a href="https://github.com/akimach/LSM9DS1_RaspberryPi_Library">RPi</a>, that should be able to provide an interface for communicating with the sensor. However, the Arduino library didn't play nice with the current Arduino code due to conflicting timer definition. Additional errors appear to have been caused by the Arduino being configured as a slave device, while the Sensor Stick library expect the Arduino to be a master device on the I2C bus.
+								A <a href="http://sfe.io/p13944">SparkFun 9DOF Sensor Stick</a> has been attached to the I2C and is currently visible to the RPi3. However, I was unable to establish communications with the device via the RPi3. A library exists for both the <a href="https://github.com/sparkfun/SparkFun_LSM9DS1_Arduino_Library">Arduino</a> and the <a href="https://github.com/akimach/LSM9DS1_RaspberryPi_Library">RPi</a> that should be able to provide an interface for communicating with the sensor. However, the Arduino library didn't integrate well with the current Arduino code due to conflicting timer definition. Additional errors appear to have been caused by the Arduino being configured as a slave device, while the Sensor Stick library expected the Arduino to be a master device on the I2C bus.
 							</p>
 							<p>
-								The RPi version of the library should enable straight for communication with the Sensor Stick via a c class. However, I was unable to correctly compile the library and integrate it into the code. Future work should focus on compiling the library and integrating it into the code base. Once the Host machine has access to the IMU measurements, focus can shit to using a Kalman filter to integrate sensor input from odometry and the IMU to better estimate the current pose of the robot.
+								The RPi version of the library should enable straight forward for communication with the Sensor Stick via a C class. However, I was unable to correctly compile the library and integrate it into the code. Future work should focus on compiling the library and integrating it into the code base. Once the Host machine has access to the IMU measurements, focus can shift to using a Kalman filter to integrate sensor input from odometry and the IMU to better estimate the current pose of the robot.
 							</p>
 						</div>
 					</div><!--// Your section has ended -->
@@ -372,7 +372,7 @@
 						</div>
 						<div class="yui-u">
 							<p>
-								This project would not have been possible without the help, guidance of Professor Skovira and Brendon Jackson. I would also like to thank the numerous class peers who guided me as I learned C, I2C and web sockets and helped me through Segmentation Faults and late nights.
+								This project would not have been possible without the help and guidance of Professor Skovira and Brendon Jackson. I would also like to thank the numerous class peers who guided me as I learned C, I2C and web sockets and who helped me through segmentation faults and late nights.
 							</p>
 						</div>
 					</div> <!--// Your section has ended -->
