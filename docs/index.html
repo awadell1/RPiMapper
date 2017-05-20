@@ -40,7 +40,7 @@
 						</div>
 						<div class="yui-u">
 							<p>
-								The goal of the RPiMapper project was to build a mobile robotics platform for autonomous mapping a static environment using multiple of ultrasonic range sensors. Environmental Mapping was done using an occupancy grid method based on the algorithm detailed in <a href="http://www.probabilistic-robotics.org/">Probabilistic Robotics</a>. Localization, while mapping was done by tracking the rotation of the wheel spokes with limited success and future iterations, should focus on improving the method of localization.
+								The goal of the RPiMapper project was to build a mobile robotics platform for autonomous mapping of a static environment using multiple ultrasonic range sensors. Environmental mapping was done using an occupancy grid method based on the algorithm detailed in <a href="http://www.probabilistic-robotics.org/">Probabilistic Robotics</a>. Localization was done by tracking the rotation of the wheel spokes with limited success. Future iterations should focus on improving the method of localization.
 							</p> <!--// Put Content here -->
 						</div>
 					</div><!--// Your section has ended -->
@@ -51,9 +51,8 @@
 						</div>
 						<div class="yui-u">
 							<p>
-								The RPiMapper consists of computer systems working together: the Arduino Nano, RPi3 and the Host computer. Their division of labor works to play to the strengths of each system, the Arduino generates the timing pulse required to control the motors, and precisely measures the sonar pulse width. The RPi3 then communicates with the Arduino using I2C and relays measurements over a web socket to the host computer. To prevent timing issues on the Arduino, RPi3 receives raw measurements from the Arduino, which it then converts into SI units before sending the data along to the host computer. Similarly, wheel speeds are given by the Host in m/s are converted into a percentage of max wheel speed before sending to the Arduino. Finally, the Host Computer uses a MATLAB script to update the occupancy grid based on the current sensor readings and estimated pose and presents a GUI for setting the robot's forward and angular velocity.
+								The RPiMapper consists of computer systems working together: the Arduino Nano, RPi3 and the Host computer. Their division of labor works to play to the strengths of each system. The Arduino generates the timing pulse required to control the motors and precisely measures the sonar pulse width. The RPi3 then communicates with the Arduino using I2C and relays measurements over a web socket to the host computer. To prevent timing issues on the Arduino, RPi3 receives raw measurements from the Arduino, which it then converts into SI units before sending the data along to the host computer. Similarly, wheel speeds that are given by the Host in m/s are converted into a percentage of max wheel speed before being sent to the Arduino. Finally, the Host computer uses a MATLAB script to update the occupancy grid based on the current sensor readings and estimated pose. It, then, presents a GUI for setting the robot's forward and angular velocity.
 							</p> <!--// Put Content here -->
-
 							<img src="images/robotSpin.gif" title="The RPiMapper" alt="The RPiMapper" style="width: 40%" />
 						</div>
 					</div><!--// Your section has ended -->
@@ -64,7 +63,7 @@
 						</div>
 						<div class="yui-u">
 							<p>
-								The development of the RPiMapper focused primarily on setting up communications, taking sensor measurements and controlling the motors. Mapping was handled using code written for MAE 5180: Autonomous Mobile Robots by Alex with slight modifications. By reusing this old code rather than reimplemented in on the Raspberry Pi, the scope of the project was reduced, and the resulting system is mostly compatible with the <a href="https://code.google.com/archive/p/beagleoncreate/">beagleoncreate</a> system used by MAE 5180.
+								The development of the RPiMapper focused primarily on setting up communications, taking sensor measurements and controlling the motors. Mapping was handled using code written for MAE 5180: Autonomous Mobile Robots by Alex with slight modifications. By re-using this old code rather than reimplementing it on the Raspberry Pi, the scope of the project was reduced, and the resulting system is mostly compatible with the <a href="https://code.google.com/archive/p/beagleoncreate/">beagleoncreate</a> system used by MAE 5180.
 							</p> <!--// Put Content here -->
 						</div>
 					</div><!--// Your section has ended -->
@@ -76,10 +75,10 @@
 						<div class="yui-u">
 							<h3>Web Socket</h3> <!--// put your heading here -->
 							<p>
-								Communication via the Host computer and RPi3 is done using a TCP/IP web socket implemented in C on the RPi side and MATLAB on the Host computer side. A communications protocol was implemented on top of the web socket connection for sending commands and receiving data. The initial protocol attempted to typecast the data to send into a <tt>char</tt> array and then unpack the data at the other end. This protocol was ultimately dropped for being difficult impossible to debug and it's general complexity. 
+								Communication via the Host computer and RPi3 is done using a TCP/IP web socket implemented in C on the RPi side and MATLAB on the Host computer side. A communications protocol was implemented on top of the web socket connection for sending commands and receiving data. The initial protocol attempted to typecast the data to be sent into a <tt>char</tt> array and then unpacked at the other end. This protocol was ultimately dropped for being difficult to debug and for it's general complexity.
 							</p> <!--// Put Content here -->
 							<p>
-								Instead, each packet consists of a 1026 <tt>char</tt> array containing the data to be sent in plain text using separate packet formats for sending and receiving data. The 1026 buffer size is significantly larger than required and faster data rates could be achieved by reducing the packet or by allowing for arbitrary packet lengths. However, as transmission speeds were sufficiently fast for our purposes, this was not pursued.
+								Instead, each packet consists of a 1026 <tt>char</tt> array containing the data to be sent in plain text, with separate packet formats used for sending and receiving data. The 1026 buffer size is significantly larger than required and faster data rates could be achieved by reducing the packet or by allowing for arbitrary packet lengths. However, as transmission speeds were sufficiently fast, this was not pursued.
 							</p>
 							<table class="tg">
 								<tr>
@@ -107,13 +106,13 @@
 
 							<h3>I2C Communications</h3>
 							<p>
-								Setting up communications between the RPi3 and the Arduino was surprising one of the most difficult components of the project. Specifically getting data to be sent from the Arduino to the RPi, took longer than expected partially due to using <tt>wiringPII2C</tt> and partially due to a lack of familiarity with the I2C protocol. I had initially assumed that I2C would allow me to write data to the Arduino, and then have the Arduino immediately write data directly back to the RPi. This turned out to entirely untrue as I2C is only half-duplex and while I had been trying to treat it like a full-duplex protocol.
+								Setting up communications between the RPi3 and the Arduino was surprising one of the most difficult components of the project. Specifically getting data to be sent from the Arduino to the RPi took longer than expected partially due to using <tt>wiringPII2C</tt> and partially due to a lack of familiarity with the I2C protocol. I had initially assumed that I2C would allow me to write data to the Arduino, and then have the Arduino immediately write data directly back to the RPi. This turned out to be entirely untrue as I2C is only a half-duplex protocol, thou I had been trying to treat it like a full-duplex protocol.
 							</p>
 							<p>
-								The solution to this was simply to have the Arduino write it's response to the RPi3 to a buffer to then send that buffer once the RPi3 attempted to read data from the Arduino. Overall this was a really simple fix, but it took me a quite a long time to realize the error that I had made.
+								The solution to this was to have the Arduino buffer it's response after receiving a request from the RPi. The buffered response was then delivered when the RPi attempted to read from the Arduino. Overall this was a really simple fix, but it took me a quite a long time to realize the error that I had made.
 							</p>
 							<p>
-								The source of difficult was my decision to the the <a href="http://wiringpi.com/">wiringPi</a> library for I2C communication on the RPi. In addition to a lack of solid documentation, the library restricts you to reading a fixed number of bytes from the device at a time. As a result, the data to be sent to the Pi would have to be dribbled in 1 character at a time, with both the RPi and Arduino having to keep track of which character should be sent.
+								The other source of difficult was my initial decision to use the <a href="http://wiringpi.com/">wiringPi</a> library for I2C communication on the RPi. In addition to a lack of solid documentation, the library restricts you to reading a fixed number of bytes from the device at a time. As a result, the data to be sent to the Pi would have to be dribbled in 1 character at a time, with both the RPi and Arduino having to keep track of which character should be sent.
 							</p>
 							<p>
 								Conversely, using the built-in Linux commands <tt>open</tt>, <tt>read</tt> and <tt>write</tt> can handle sending multiple bytes at a time, have through documentation, and were a breeze to setup by following an <a href="http://elinux.org/Interfacing_with_I2C_Devices"> eLinux Tutorial</a>. The switch from <tt>wiringPi</tt> to treating the I2C bus as a file took less than 30 minutes (Compared to the hours spent messing around with <tt>wiringPi</tt>).
